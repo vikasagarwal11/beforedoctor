@@ -1,0 +1,128 @@
+[
+  {
+    "symptom": "fever",
+    "age_groups": {
+      "0-3 months": {
+        "diagnoses": [
+          "neonatal sepsis",
+          "UTI",
+          "meningitis"
+        ],
+        "treatment": {
+          "medications": [
+            {
+              "type": "Rx",
+              "name": "IV antibiotics",
+              "note": "Hospital admission recommended"
+            }
+          ],
+          "home_care": [],
+          "red_flags": [
+            "Lethargy",
+            "Poor feeding",
+            "Bulging fontanelle"
+          ]
+        }
+      },
+      "6 months - 3 years": {
+        "diagnoses": [
+          "viral fever",
+          "ear infection",
+          "roseola"
+        ],
+        "treatment": {
+          "medications": [
+            {
+              "type": "OTC",
+              "name": "Acetaminophen",
+              "dosage": "15 mg/kg every 4\u20136 hours",
+              "max_daily_dose": "75 mg/kg/day"
+            },
+            {
+              "type": "OTC",
+              "name": "Ibuprofen",
+              "dosage": "10 mg/kg every 6\u20138 hours",
+              "note": "Avoid under 6 months"
+            }
+          ],
+          "home_care": [
+            "Fluids",
+            "Light clothing",
+            "Monitor temperature"
+          ],
+          "red_flags": [
+            "Fever >104\u00b0F",
+            "Fever >3 days",
+            "Seizure"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "symptom": "vomiting",
+    "age_groups": {
+      "6 months - 3 years": {
+        "diagnoses": [
+          "gastroenteritis",
+          "food poisoning"
+        ],
+        "treatment": {
+          "medications": [
+            {
+              "type": "OTC",
+              "name": "Oral Rehydration Solution",
+              "note": "Small sips every 5-10 minutes"
+            }
+          ],
+          "home_care": [
+            "Clear fluids",
+            "Avoid solid food initially",
+            "Watch for dehydration signs"
+          ],
+          "red_flags": [
+            "Projectile vomiting",
+            "Green (bilious) vomit",
+            "No urination >8 hours"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "symptom": "rash",
+    "age_groups": {
+      "3 years - 12 years": {
+        "diagnoses": [
+          "viral exanthem",
+          "contact dermatitis",
+          "eczema"
+        ],
+        "treatment": {
+          "medications": [
+            {
+              "type": "OTC",
+              "name": "Hydrocortisone cream",
+              "note": "Apply thin layer 2x/day"
+            },
+            {
+              "type": "OTC",
+              "name": "Antihistamine (Cetirizine)",
+              "note": "Use for itchiness"
+            }
+          ],
+          "home_care": [
+            "Cool compresses",
+            "Avoid scratching",
+            "Identify and remove irritants"
+          ],
+          "red_flags": [
+            "Rapidly spreading rash",
+            "Blistering",
+            "Fever + rash"
+          ]
+        }
+      }
+    }
+  }
+]

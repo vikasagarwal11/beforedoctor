@@ -1,0 +1,50 @@
+# .cursorrules for BeforeDoctor
+
+## General Guidelines
+- **Purpose**: Voice-driven health app for symptom logging, clinic prep (save 5-15 min/visit).
+- **Health App Standards**:
+  - HIPAA compliance: Use SQLite for local storage (encrypted with sqlcipher if needed), explicit user consent for Firebase sync.
+  - Offline-first: All features (voice logging, extraction, prompts) must work offline using Google ML Kit; sync to Firebase when online.
+  - Accessibility: WCAG-compliant (high contrast, voiceover), multilingual support for major US languages (English, Spanish, Chinese, French) via google_ml_kit.
+- **Voice API**: User-configurable system with xAI Grok Voice API and OpenAI Realtime Audio API. Users can choose primary/fallback and auto-fallback on errors. No OpenAI Whisper.
+- **UI**: Use GetWidget for sleek, modern components (Material 3, calming blues/greens). Avoid basic Cursor-generated UI; include animations (e.g., FadeTransition for prompts).
+- **Animated Character**: Implement interactive cartoon doctor avatar using Rive (animations), Flutter TTS (speech), and phoneme-based lip-sync. Character states: idle, listening, speaking, thinking, concerned, happy, explaining.
+- **Testing**: Ensure 90%+ accuracy on 100 synthetic logs (voice, extraction). Include unit tests.
+
+## Code Style
+- **Flutter/Dart**: Clean architecture (separate UI/logic/data). Use Riverpod for state management.
+- **Data Storage**:
+  - SQLite (`sqflite`): Offline storage for symptoms (timestamp, symptom, details, caregiver_id).
+  - Firebase (`firebase_database`): Real-time sync for caregiver collaboration, secure clinic sharing.
+- **Voice & AI**:
+  - STT: User-configurable between xAI Grok Voice API (cloud, multilingual, function calling) and OpenAI Realtime Audio API. Google ML Kit for offline fallback.
+  - NLP: GPT-4o (`dart_openai`) for symptom extraction/prompts; rule-based fallback for offline (e.g., regex for basic extraction like "fever [number]").
+  - Insights: Rule-based (e.g., fever >103°F → flag) + OpenWeather API (free).
+- **Voice API Architecture**: Abstract VoiceService interface with GrokVoiceService and OpenAIVoiceService implementations. Smart fallback logic with user-configurable primary/fallback selection.
+
+## Features
+- **Voice Logging**: Capture symptoms via voice (e.g., "Aarav has 102 fever"), trigger functions (e.g., save to SQLite, prompt follow-up).
+- **Symptom Extraction**: Parse voice to JSON (symptom, timeline, meds) via GPT-4o.
+- **Prompts**: Rule-based (e.g., "Any cough?") + GPT-4o for smart follow-ups.
+- **Multilingual**: Google ML Kit for offline translation supporting major US languages (English, Spanish, Chinese, French) with automatic language detection and translation.
+- **Insights**: Basic rules (e.g., high fever → "See doctor") + weather context.
+- **Clinic Sharing**: QR export (`qr_flutter`) or Firebase sync for EHR.
+- **Voice API Settings**: User interface to choose primary/fallback API, auto-fallback toggle, and API performance tracking.
+- **Voice Clarity Confidence Feedback**: Display transcription confidence score (0-100%) with re-record option if low (<90%).
+- **Animated Character Integration**: Interactive doctor avatar with lip-sync, TTS, emotional states, and voice-guided symptom logging for engaging user experience.
+- **Modularize Avatar UX**: Define CharacterInteractionEngine as a separate module for animation (Rive), TTS (flutter_tts), emotional tone, and localization.
+- **AI-Generated Singing Response**: ElevenLabs TTS integration for calming lullabies with dynamic lyrics based on symptoms. Real-time lip-sync with Rive animations for viral differentiator.
+
+## Error Handling
+- Graceful failures (e.g., retry API calls, show toasts for network issues).
+- Offline mode: Store all data in SQLite, sync later.
+- Smart fallback: Automatic switching between voice APIs if primary fails.
+
+## Development & Testing
+- **Platform Support**: Cross-platform (Android/iOS) with platform-specific optimizations
+- **Development Environment**: Windows with Android simulator, iOS testing via cloud/CI
+- **Platform-Specific Features**:
+  - iOS: HealthKit integration, iOS-specific permissions
+  - Android: Health Connect integration, Android-specific permissions
+- **Testing Strategy**: Test on both Android simulator and iOS simulator/device
+- **Deployment**: Prepare for both App Store and Google Play Store 

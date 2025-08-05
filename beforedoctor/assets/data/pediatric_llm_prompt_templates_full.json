@@ -1,0 +1,155 @@
+{
+  "fever": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has a fever.\n\n**Symptom Details:**\n- Temperature: {{temperature}}\n- Duration: {{duration}}\n- Associated symptoms: {{associated_symptoms}}\n- Medications given: {{medications}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Immediate Actions**: What the parent should do now\n3. **Medications**: Age-appropriate dosing recommendations\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "How high did the fever get?",
+      "How was the temperature measured?",
+      "Any other symptoms (cough, rash, vomiting)?",
+      "Has the child been around sick people?",
+      "Any recent travel or exposure?"
+    ],
+    "red_flags": [
+      "Fever >104°F",
+      "Fever >3 days",
+      "Fever with rash",
+      "Fever with stiff neck",
+      "Fever in infant <3 months"
+    ]
+  },
+  "cough": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has a cough.\n\n**Symptom Details:**\n- Cough type: {{cough_type}}\n- Duration: {{duration}}\n- Timing: {{timing}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Comfort Measures**: How to help the child feel better\n3. **Medications**: Age-appropriate recommendations\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "Is it a dry or wet cough?",
+      "When is it worse (night, activity)?",
+      "Any fever or breathing difficulty?",
+      "Any recent cold or exposure?",
+      "Any wheezing or chest pain?"
+    ],
+    "red_flags": [
+      "Difficulty breathing",
+      "Blue lips or face",
+      "Cough with fever >104°F",
+      "Cough lasting >2 weeks",
+      "Cough with chest pain"
+    ]
+  },
+  "vomiting": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child is vomiting.\n\n**Symptom Details:**\n- Frequency: {{frequency}}\n- Duration: {{duration}}\n- Content: {{content}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Hydration**: How to prevent dehydration\n3. **Diet**: What to feed/avoid\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "How many times has the child vomited?",
+      "What did they eat before vomiting?",
+      "Any fever or diarrhea?",
+      "Any recent head injury?",
+      "Signs of dehydration (dry mouth, no tears)?"
+    ],
+    "red_flags": [
+      "Blood or bile in vomit",
+      "Projectile vomiting in infants",
+      "Vomiting with severe headache",
+      "Signs of dehydration",
+      "Vomiting >6 times per day"
+    ]
+  },
+  "diarrhea": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has diarrhea.\n\n**Symptom Details:**\n- Frequency: {{frequency}}\n- Duration: {{duration}}\n- Consistency: {{consistency}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Hydration**: How to prevent dehydration\n3. **Diet**: What to feed/avoid\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "How many episodes per day?",
+      "What does the stool look like?",
+      "Any blood or mucus?",
+      "Any fever or vomiting?",
+      "Signs of dehydration?"
+    ],
+    "red_flags": [
+      "Bloody stools",
+      "Diarrhea >10 times per day",
+      "Signs of dehydration",
+      "Diarrhea lasting >2 weeks",
+      "Recent antibiotic use"
+    ]
+  },
+  "ear_pain": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has ear pain.\n\n**Symptom Details:**\n- Location: {{location}}\n- Duration: {{duration}}\n- Severity: {{severity}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Pain Relief**: Age-appropriate pain management\n3. **Medications**: Recommendations if needed\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "Which ear is affected?",
+      "Is the child pulling at their ear?",
+      "Any fever or cold symptoms?",
+      "Any fluid draining from ear?",
+      "Any recent swimming or water exposure?"
+    ],
+    "red_flags": [
+      "Severe ear pain",
+      "Fluid draining from ear",
+      "Ear pain with fever",
+      "Ear pain lasting >3 days",
+      "Hearing changes"
+    ]
+  },
+  "rash": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has a rash.\n\n**Symptom Details:**\n- Location: {{location}}\n- Appearance: {{appearance}}\n- Duration: {{duration}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Comfort Measures**: How to help with itching/pain\n3. **Medications**: Topical treatments if appropriate\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "Where is the rash located?",
+      "What does it look like (red, bumpy, blisters)?",
+      "Is it itchy or painful?",
+      "Any fever or other symptoms?",
+      "Any recent exposure to new foods, soaps, or medications?"
+    ],
+    "red_flags": [
+      "Rash with fever",
+      "Rash spreading rapidly",
+      "Blisters or petechiae",
+      "Rash with difficulty breathing",
+      "Rash covering large areas"
+    ]
+  },
+  "headache": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has a headache.\n\n**Symptom Details:**\n- Location: {{location}}\n- Duration: {{duration}}\n- Severity: {{severity}}\n- Associated symptoms: {{associated_symptoms}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Pain Relief**: Age-appropriate pain management\n3. **Medications**: Recommendations if needed\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "Where is the headache located?",
+      "How severe is the pain (1-10)?",
+      "Any fever or vomiting?",
+      "Any recent head injury?",
+      "Any vision changes or sensitivity to light?"
+    ],
+    "red_flags": [
+      "Sudden severe headache",
+      "Headache with vomiting",
+      "Headache with neck stiffness",
+      "Headache after head injury",
+      "Worst headache of life"
+    ]
+  },
+  "sore_throat": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has a sore throat.\n\n**Symptom Details:**\n- Duration: {{duration}}\n- Severity: {{severity}}\n- Associated symptoms: {{associated_symptoms}}\n- Swallowing difficulty: {{swallowing_difficulty}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Comfort Measures**: How to help with pain\n3. **Medications**: Age-appropriate recommendations\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: Include age-appropriate considerations and safety disclaimers.",
+    "follow_up_questions": [
+      "Can the child swallow liquids?",
+      "Any fever or cough?",
+      "Any white patches in throat?",
+      "Any recent exposure to strep?",
+      "Any drooling or difficulty breathing?"
+    ],
+    "red_flags": [
+      "Difficulty breathing",
+      "Drooling or inability to swallow",
+      "Sore throat with high fever",
+      "White patches in throat",
+      "Sore throat lasting >1 week"
+    ]
+  },
+  "breathing_difficulty": {
+    "prompt_template": "You are a board-certified pediatrician. A parent reports their {{child_age}}-year-old {{gender}} child has breathing difficulty.\n\n**Symptom Details:**\n- Severity: {{severity}}\n- Duration: {{duration}}\n- Associated symptoms: {{associated_symptoms}}\n- Color changes: {{color_changes}}\n\n**Please provide:**\n1. **Assessment**: Most likely cause and severity\n2. **Immediate Actions**: What the parent should do now\n3. **Emergency Signs**: When to call 911\n4. **Red Flags**: When to seek immediate medical care\n5. **Follow-up**: When to contact doctor\n\n**Important**: This is a potentially serious symptom. Include clear emergency guidance.",
+    "follow_up_questions": [
+      "Is the child using extra muscles to breathe?",
+      "Any wheezing or stridor?",
+      "Any color changes (blue lips)?",
+      "Any fever or cough?",
+      "Any recent choking or injury?"
+    ],
+    "red_flags": [
+      "Blue lips or face",
+      "Severe difficulty breathing",
+      "Using extra muscles to breathe",
+      "Breathing difficulty with fever",
+      "Any breathing difficulty in infants"
+    ]
+  }
+}
