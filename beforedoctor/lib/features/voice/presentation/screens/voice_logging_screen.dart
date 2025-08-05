@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/services/voice_input_service.dart';
 import '../../../../core/services/ai_prompt_service.dart';
 
@@ -83,18 +82,21 @@ class _VoiceLoggingScreenState extends ConsumerState<VoiceLoggingScreen>
   }
 
   void _onTranscriptionUpdate(String transcription) {
+    if (!mounted) return;
     setState(() {
       _currentTranscription = transcription;
     });
   }
 
   void _onConfidenceUpdate(double confidence) {
+    if (!mounted) return;
     setState(() {
       _currentConfidence = confidence;
     });
   }
 
   void _onListeningUpdate(bool isListening) {
+    if (!mounted) return;
     setState(() {
       _isListening = isListening;
     });
@@ -107,6 +109,7 @@ class _VoiceLoggingScreenState extends ConsumerState<VoiceLoggingScreen>
   }
 
   void _onProcessingUpdate(bool isProcessing) {
+    if (!mounted) return;
     setState(() {
       _isProcessing = isProcessing;
     });
@@ -285,288 +288,312 @@ class _VoiceLoggingScreenState extends ConsumerState<VoiceLoggingScreen>
       body: SingleChildScrollView(
         child: Column(
           children: [
-          // Child Metadata Display
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.child_care, color: Colors.blue),
-                const SizedBox(width: 8),
-                Text(
-                  '${_childMetadata['child_age']}-year-old ${_childMetadata['gender']}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: _showChildMetadataDialog,
-                  child: const Text('Edit'),
-                ),
-              ],
-            ),
-          ),
-
-          // Manual Input Area
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Enter Symptom Description:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _textController,
-                  decoration: const InputDecoration(
-                    hintText: 'e.g., My child has a fever of 102 degrees',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-
-          // Character Animation Area
-          Container(
-            height: 200,
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Center(
-              child: _isListening
-                  ? AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        return Container(
-                          width: 100 + (_pulseController.value * 20),
-                          height: 100 + (_pulseController.value * 20),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.blue.withValues(alpha: 0.3),
-                          ),
-                          child: const Icon(
-                            Icons.mic,
-                            size: 50,
-                            color: Colors.blue,
-                          ),
-                        );
-                      },
-                    )
-                  : const Icon(
-                      Icons.mic_off,
-                      size: 50,
-                      color: Colors.grey,
-                    ),
-            ),
-          ),
-
-          // Transcription Area
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _isListening ? Icons.record_voice_over : Icons.mic,
-                      color: _isListening ? Colors.red : Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _isListening ? 'Processing...' : 'Ready to process',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: _isListening ? Colors.red : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _currentTranscription.isEmpty ? 'Enter text above and tap "Start Processing" to analyze symptoms...' : _currentTranscription,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: _currentTranscription.isEmpty ? Colors.grey : Colors.black87,
-                  ),
-                ),
-                if (_currentConfidence > 0) ...[
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: _currentConfidence,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _currentConfidence > 0.8 ? Colors.green : Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Confidence: ${(_currentConfidence * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _currentConfidence > 0.8 ? Colors.green : Colors.orange,
-                    ),
+            // Child Metadata Display
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
                   ),
                 ],
-              ],
-            ),
-          ),
-
-          // Detected Symptoms
-          if (_detectedSymptoms.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '🏥 Detected Symptoms:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: _detectedSymptoms.map((symptom) {
-                      return Chip(
-                        label: Text(symptom.replaceAll('_', ' ')),
-                        backgroundColor: Colors.green[100],
-                        labelStyle: const TextStyle(color: Colors.green),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // AI Generated Prompt
-          if (_generatedPrompt.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '🤖 AI-Generated Prompt:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _generatedPrompt,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          // Processing Indicator
-          if (_isProcessing) ...[
-            const SizedBox(height: 16),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange[200]!),
               ),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[600]!),
-                    ),
+                  const Icon(Icons.child_care, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_childMetadata['child_age']}-year-old ${_childMetadata['gender']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Processing symptoms with AI...',
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _showChildMetadataDialog,
+                    child: const Text('Edit'),
                   ),
                 ],
               ),
             ),
-          ],
 
-          const SizedBox(height: 20),
+            // Manual Input Area
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Enter Symptom Description:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g., My child has a fever of 102 degrees',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
 
-          // Action Buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isListening ? _stopVoiceLogging : _startVoiceLogging,
-                    icon: Icon(_isListening ? Icons.stop : Icons.play_arrow),
-                    label: Text(_isListening ? 'Stop Processing' : 'Start Processing'),
+            // Character Animation Area
+            Container(
+              height: 200,
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: _isListening
+                    ? AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) {
+                          return Container(
+                            width: 100 + (_pulseController.value * 20),
+                            height: 100 + (_pulseController.value * 20),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.blue.withValues(alpha: 0.3),
+                            ),
+                            child: const Icon(
+                              Icons.mic,
+                              size: 50,
+                              color: Colors.blue,
+                            ),
+                          );
+                        },
+                      )
+                    : const Icon(
+                        Icons.mic_off,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+              ),
+            ),
+
+            // Transcription Area
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        _isListening ? Icons.record_voice_over : Icons.mic,
+                        color: _isListening ? Colors.red : Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isListening ? 'Processing...' : 'Ready to process',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _isListening ? Colors.red : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _currentTranscription.isEmpty ? 'Enter text above and tap "Start Processing" to analyze symptoms...' : _currentTranscription,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: _currentTranscription.isEmpty ? Colors.grey : Colors.black87,
+                    ),
+                  ),
+                  if (_currentConfidence > 0) ...[
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: _currentConfidence,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _currentConfidence > 0.8 ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Confidence: ${(_currentConfidence * 100).toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _currentConfidence > 0.8 ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Detected Symptoms
+            if (_detectedSymptoms.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '🏥 Detected Symptoms:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: _detectedSymptoms.map((symptom) {
+                        return Chip(
+                          label: Text(symptom.replaceAll('_', ' ')),
+                          backgroundColor: Colors.green[100],
+                          labelStyle: const TextStyle(color: Colors.green),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // AI Generated Prompt
+            if (_generatedPrompt.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '🤖 AI-Generated Prompt:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _generatedPrompt,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Processing Indicator
+            if (_isProcessing) ...[
+              const SizedBox(height: 16),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange[600]!),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Processing symptoms with AI...',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Action Buttons
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isListening ? _stopVoiceLogging : _startVoiceLogging,
+                      icon: Icon(_isListening ? Icons.stop : Icons.play_arrow),
+                      label: Text(_isListening ? 'Stop Processing' : 'Start Processing'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isListening ? Colors.red : Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _isListening || _isProcessing ? null : () {
+                      setState(() {
+                        _currentTranscription = '';
+                        _currentConfidence = 0.0;
+                        _detectedSymptoms.clear();
+                        _generatedPrompt = '';
+                        _followUpQuestions.clear();
+                        _textController.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Clear'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _isListening ? Colors.red : Colors.blue,
+                      backgroundColor: Colors.grey,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -574,48 +601,25 @@ class _VoiceLoggingScreenState extends ConsumerState<VoiceLoggingScreen>
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _isListening || _isProcessing ? null : () {
-                    setState(() {
-                      _currentTranscription = '';
-                      _currentConfidence = 0.0;
-                      _detectedSymptoms.clear();
-                      _generatedPrompt = '';
-                      _followUpQuestions.clear();
-                      _textController.clear();
-                    });
-                  },
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Clear'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _generatedPrompt.isNotEmpty ? () => _showTreatmentDialog() : null,
+                    icon: const Icon(Icons.medical_services),
+                    label: const Text('AI Analysis'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _generatedPrompt.isNotEmpty ? () => _showTreatmentDialog() : null,
-                  icon: const Icon(Icons.medical_services),
-                  label: const Text('AI Analysis'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

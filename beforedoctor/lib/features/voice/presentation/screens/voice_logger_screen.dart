@@ -1,37 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../services/stt_service.dart';
 import '../../../../core/services/ai_prompt_service.dart';
-import '../../../../core/services/voice_input_service.dart';
+import '../../../../services/llm_service.dart';
+import '../../../../core/services/character_interaction_engine.dart';
+import '../../../../core/services/logging_service.dart';
 
-class VoiceLoggerScreen extends ConsumerStatefulWidget {
+class VoiceLoggerScreen extends StatefulWidget {
   const VoiceLoggerScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<VoiceLoggerScreen> createState() => _VoiceLoggerScreenState();
+  State<VoiceLoggerScreen> createState() => _VoiceLoggerScreenState();
 }
 
-class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
-  late VoiceInputService _voiceService;
-  late AIPromptService _promptService;
-  
+class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
+  final _symptomController = TextEditingController();
+  final STTService _stt = STTService();
+  final AIPromptService _promptService = AIPromptService();
+  final LLMService _llmService = LLMService();
+  final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
+  final LoggingService _loggingService = LoggingService();
+
+  String _recognizedText = '';
+  String _aiResponse = '';
+  bool _isProcessing = false;
   bool _isListening = false;
-  String _transcription = '';
-  String _detectedSymptom = '';
-  String _generatedPrompt = '';
-  List<String> _followUpQuestions = [];
-  
-  // Child metadata
-  Map<String, String> _childMetadata = {
+  String _selectedModel = 'auto';
+  Map<String, dynamic> _modelPerformance = {};
+  Map<String, dynamic> _modelRecommendation = {};
+
+  final Map<String, String> _childMetadata = {
+    'child_name': 'Ava',
     'child_age': '4',
     'gender': 'female',
+    'symptom_duration': '2 days',
     'temperature': '',
-    'duration': '',
     'associated_symptoms': '',
     'medications': '',
   };
-
-  // Text controller for manual input
-  final TextEditingController _textController = TextEditingController();
 
   @override
   void initState() {
@@ -40,175 +45,208 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
   }
 
   Future<void> _initializeServices() async {
-    try {
-      // Initialize voice service
-      _voiceService = VoiceInputService.instance;
-      await _voiceService.initialize();
-      
-      // Initialize AI prompt service
-      _promptService = AIPromptService();
-      await _promptService.loadTemplates();
-      
-      print('✅ Voice logger services initialized successfully');
-    } catch (e) {
-      print('❌ Error initializing voice logger services: $e');
-    }
+    await _stt.initialize();
+    await _promptService.loadTemplates();
+    await _characterEngine.initialize();
+    await _llmService.initialize();
+    _updateModelPerformance();
   }
 
-  void _startListening() async {
+  void _updateModelPerformance() {
+    setState(() {
+      _modelPerformance = _llmService.getModelPerformanceSummary();
+      _modelRecommendation = _llmService.getModelRecommendation();
+    });
+  }
+
+  void _startListening() {
     if (_isListening) return;
 
     setState(() {
       _isListening = true;
-      _transcription = '';
-      _detectedSymptom = '';
-      _generatedPrompt = '';
-      _followUpQuestions.clear();
+      _recognizedText = '';
+      _aiResponse = '';
     });
 
-    // Use simulated voice input with text from controller
-    final inputText = _textController.text.isNotEmpty 
-        ? _textController.text 
-        : "My 4-year-old daughter has a fever of 102 degrees";
-    
-    await _voiceService.simulateVoiceInput(inputText);
-    
-    // Listen to the transcription stream
-    _voiceService.transcriptionStream.listen((transcription) {
-      setState(() {
-        _transcription = transcription;
-      });
-    });
-
-    // Listen to processing stream to know when to stop
-    _voiceService.processingStream.listen((isProcessing) {
-      if (!isProcessing && _isListening) {
+    _stt.startListening(
+      onResult: (text) {
+        setState(() {
+          _recognizedText = text;
+          _symptomController.text = text;
+        });
+      },
+      onDone: () {
+        setState(() => _isListening = false);
+        // Auto-process after voice input
+        if (_recognizedText.isNotEmpty) {
+          _processSymptom(_recognizedText);
+        }
+      },
+      onError: (error) {
         setState(() {
           _isListening = false;
+          _aiResponse = 'Voice input error: $error';
         });
-      }
-    });
-  }
-
-  void _stopListening() {
-    _voiceService.stopListening();
-    setState(() {
-      _isListening = false;
-    });
-  }
-
-  void _processTranscription() {
-    if (_transcription.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No transcription to process.')),
-      );
-      return;
-    }
-
-    // Extract symptom using our voice service
-    final symptoms = _voiceService.detectSymptoms(_transcription);
-    
-    if (symptoms.isNotEmpty) {
-      final matchedSymptom = symptoms.first;
-      setState(() {
-        _detectedSymptom = matchedSymptom;
-      });
-
-      // Generate AI prompt
-      final prompt = _promptService.buildLLMPrompt(matchedSymptom, _childMetadata);
-      final followUpQuestions = _promptService.getFollowUpQuestions(matchedSymptom);
-      
-      setState(() {
-        _generatedPrompt = prompt;
-        _followUpQuestions = followUpQuestions;
-      });
-
-      // Show results dialog
-      _showResultsDialog(matchedSymptom, prompt, followUpQuestions);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No matching symptom found.')),
-      );
-    }
-  }
-
-  void _showResultsDialog(String symptom, String prompt, List<String> followUpQuestions) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('🏥 Results for $symptom'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Detected Symptom: $symptom', 
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              const Text('Generated Prompt:', 
-                style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(prompt, style: const TextStyle(fontSize: 12)),
-              const SizedBox(height: 16),
-              if (followUpQuestions.isNotEmpty) ...[
-                const Text('Follow-up Questions:', 
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...(followUpQuestions.map((question) => 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('• $question'),
-                  )
-                )),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+      },
     );
   }
 
-  void _showChildMetadataDialog() {
+  void _stopListening() {
+    _stt.stopListening();
+    setState(() => _isListening = false);
+  }
+
+  Future<void> _processSymptom(String symptom) async {
+    if (symptom.trim().isEmpty) return;
+
+    setState(() {
+      _isProcessing = true;
+      _aiResponse = '';
+    });
+
+    try {
+      // Start character thinking animation
+      _characterEngine.startThinking();
+
+      // Build prompt using AIPromptService
+      final prompt = _promptService.buildLLMPrompt(symptom, _childMetadata);
+      if (prompt.isEmpty) {
+        setState(() {
+          _aiResponse = 'No template found for "$symptom".';
+          _isProcessing = false;
+        });
+        return;
+      }
+
+      // Call AI service with dynamic model selection
+      String llmResponse;
+      String modelUsed;
+      int latencyMs = 0;
+
+      final startTime = DateTime.now();
+      
+      switch (_selectedModel) {
+        case 'auto':
+          llmResponse = await _llmService.getAIResponse(prompt);
+          modelUsed = 'auto_selected';
+          break;
+        case 'openai':
+          llmResponse = await _llmService.callOpenAI(prompt);
+          modelUsed = 'openai';
+          break;
+        case 'grok':
+          llmResponse = await _llmService.callGrok(prompt);
+          modelUsed = 'grok';
+          break;
+        case 'fallback':
+        default:
+          llmResponse = _llmService.generateFallbackResponse(prompt);
+          modelUsed = 'fallback';
+          break;
+      }
+
+      latencyMs = DateTime.now().difference(startTime).inMilliseconds;
+
+      // React to symptom and speak the result
+      _characterEngine.reactToSymptom(symptom);
+      await _characterEngine.speakWithAnimation(llmResponse);
+
+      // Log the interaction
+      await _loggingService.logInteraction(
+        interactionType: 'voice_log',
+        symptomCategory: symptom,
+        modelUsed: modelUsed,
+        responseTime: latencyMs,
+        success: llmResponse.isNotEmpty,
+        metadata: {
+          'prompt': prompt,
+          'response_length': llmResponse.length,
+          'child_name': _childMetadata['child_name'],
+          'child_age': _childMetadata['child_age'],
+          'child_gender': _childMetadata['gender'],
+          'voice_confidence': _stt.confidence,
+        },
+      );
+
+      // Update model performance display
+      _updateModelPerformance();
+
+      setState(() {
+        _aiResponse = llmResponse;
+        _isProcessing = false;
+      });
+
+    } catch (e) {
+      setState(() {
+        _aiResponse = 'Error processing request: $e';
+        _isProcessing = false;
+      });
+      
+      // Log error
+      await _loggingService.logInteraction(
+        interactionType: 'voice_log',
+        symptomCategory: 'error',
+        modelUsed: _selectedModel,
+        responseTime: 0,
+        success: false,
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
+  void _showModelSelectionDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('👶 Child Information'),
+        title: const Text('🔧 Model Selection'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Age',
-                hintText: '4',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (value) => _childMetadata['child_age'] = value,
-              controller: TextEditingController(text: _childMetadata['child_age']),
-            ),
-            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Gender',
-              ),
-              value: _childMetadata['gender'],
+              value: _selectedModel,
               items: const [
-                DropdownMenuItem(value: 'male', child: Text('Male')),
-                DropdownMenuItem(value: 'female', child: Text('Female')),
+                DropdownMenuItem(value: 'auto', child: Text('🔄 Auto-Select (Recommended)')),
+                DropdownMenuItem(value: 'openai', child: Text('OpenAI GPT-4o')),
+                DropdownMenuItem(value: 'grok', child: Text('xAI Grok')),
+                DropdownMenuItem(value: 'fallback', child: Text('Local Fallback')),
               ],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
-                    _childMetadata['gender'] = value;
+                    _selectedModel = value;
                   });
                 }
               },
             ),
+            const SizedBox(height: 16),
+            if (_modelRecommendation.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '💡 AI Recommendation:',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Model: ${_modelRecommendation['recommendedModel']?.toUpperCase() ?? 'N/A'}',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                    Text(
+                      'Confidence: ${_modelRecommendation['confidence'] ?? 'N/A'}',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -222,28 +260,35 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
   }
 
   @override
+  void dispose() {
+    _symptomController.dispose();
+    _stt.dispose();
+    _characterEngine.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        title: const Text('🎤 Voice Logger'),
+        title: const Text("🎤 BeforeDoctor: Voice Assistant"),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.child_care),
-            onPressed: _showChildMetadataDialog,
-            tooltip: 'Child Information',
+            icon: const Icon(Icons.settings),
+            onPressed: _showModelSelectionDialog,
+            tooltip: 'Model Settings',
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Child Metadata Display
+            // Model Selection Display
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -251,7 +296,7 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -259,16 +304,32 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.child_care, color: Colors.blue),
+                  const Icon(Icons.settings, color: Colors.blue),
                   const SizedBox(width: 8),
-                  Text(
-                    '${_childMetadata['child_age']}-year-old ${_childMetadata['gender']}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'AI Model:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          _selectedModel == 'auto' ? '🔄 Auto-Select' : _selectedModel.toUpperCase(),
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        if (_modelRecommendation.isNotEmpty) ...[
+                          Text(
+                            'Recommended: ${_modelRecommendation['recommendedModel']?.toUpperCase() ?? 'N/A'}',
+                            style: TextStyle(fontSize: 10, color: Colors.green),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                   TextButton(
-                    onPressed: _showChildMetadataDialog,
-                    child: const Text('Edit'),
+                    onPressed: _showModelSelectionDialog,
+                    child: const Text('Change'),
                   ),
                 ],
               ),
@@ -284,7 +345,7 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -293,33 +354,75 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Enter Symptom Description:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Text(
+                        'Enter or speak a symptom:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: _isListening ? _stopListening : _startListening,
+                        icon: Icon(_isListening ? Icons.stop : Icons.mic),
+                        color: _isListening ? Colors.red : Colors.blue,
+                        tooltip: _isListening ? 'Stop Recording' : 'Start Recording',
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   TextField(
-                    controller: _textController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., My child has a fever of 102 degrees',
-                      border: OutlineInputBorder(),
+                    controller: _symptomController,
+                    decoration: InputDecoration(
+                      hintText: _isListening ? 'Listening...' : 'e.g., fever, cough, vomiting',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: _isListening
+                        ? const Icon(Icons.mic, color: Colors.red)
+                        : null,
                     ),
                     maxLines: 3,
+                    enabled: !_isListening,
                   ),
+                  if (_isListening) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.mic, color: Colors.red, size: 16),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Listening... Tap mic to stop',
+                            style: TextStyle(fontSize: 12, color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Voice Control Buttons
+            // Action Buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _isListening ? _stopListening : _startListening,
                     icon: Icon(_isListening ? Icons.stop : Icons.mic),
-                    label: Text(_isListening ? 'Stop Listening' : 'Start Listening'),
+                    label: Text(_isListening ? 'Stop Recording' : '🎤 Start Voice'),
+                    onPressed: () {
+                      if (_isListening) {
+                        _stopListening();
+                      } else {
+                        _startListening();
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isListening ? Colors.red : Colors.blue,
                       foregroundColor: Colors.white,
@@ -331,16 +434,26 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _transcription.isNotEmpty ? _processTranscription : null,
-                  icon: const Icon(Icons.psychology),
-                  label: const Text('Process'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: (_isProcessing || _isListening) ? null : () => _processSymptom(
+                      _recognizedText.isNotEmpty ? _recognizedText : _symptomController.text,
+                    ),
+                    icon: _isProcessing 
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ) 
+                      : const Icon(Icons.send),
+                    label: Text(_isProcessing ? 'Processing...' : '🤖 Analyze'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
                     ),
                   ),
                 ),
@@ -349,95 +462,76 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
 
             const SizedBox(height: 20),
 
-            // Transcription Display
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _isListening ? Icons.record_voice_over : Icons.mic,
-                        color: _isListening ? Colors.red : Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _isListening ? 'Listening...' : 'Ready',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _isListening ? Colors.red : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _transcription.isEmpty ? 'Say something...' : _transcription,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: _transcription.isEmpty ? Colors.grey : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Results Display
-            if (_detectedSymptom.isNotEmpty) ...[
+            // Voice Recognition Display
+            if (_recognizedText.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.green[200]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '🏥 Detected Symptom: $_detectedSymptom',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    Row(
+                      children: [
+                        const Icon(Icons.mic, color: Colors.green, size: 16),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'You said:',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                      ],
                     ),
-                    if (_generatedPrompt.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      const Text(
-                        '🤖 Generated Prompt:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _generatedPrompt,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                    if (_followUpQuestions.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      const Text(
-                        '❓ Follow-up Questions:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      ...(_followUpQuestions.map((question) => 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text('• $question'),
-                        )
-                      )),
-                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _recognizedText,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // AI Response Display
+            if (_aiResponse.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          '🤖 AI Response:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[200],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _selectedModel.toUpperCase(),
+                            style: const TextStyle(fontSize: 10, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _aiResponse,
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ],
                 ),
               ),
@@ -449,11 +543,9 @@ class _VoiceLoggerScreenState extends ConsumerState<VoiceLoggerScreen> {
             ElevatedButton.icon(
               onPressed: () {
                 setState(() {
-                  _transcription = '';
-                  _detectedSymptom = '';
-                  _generatedPrompt = '';
-                  _followUpQuestions.clear();
-                  _textController.clear();
+                  _aiResponse = '';
+                  _recognizedText = '';
+                  _symptomController.clear();
                 });
               },
               icon: const Icon(Icons.clear),

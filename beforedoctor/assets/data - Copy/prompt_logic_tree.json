@@ -1,0 +1,56 @@
+[
+  {
+    "symptom": "fever",
+    "follow_up_questions": [
+      "What is the highest temperature recorded?",
+      "How was the temperature measured (oral, rectal, forehead)?",
+      "When did the fever start?",
+      "How often does it come and go?",
+      "Has any medication been given for the fever?",
+      "Are there any other symptoms like rash, cough, vomiting?",
+      "Has the child been exposed to anyone sick recently?"
+    ],
+    "red_flags_to_trigger": [
+      "Fever >104\u00b0F",
+      "Fever lasting more than 3 days",
+      "Fever with stiff neck or seizures",
+      "Fever in infant <3 months"
+    ]
+  },
+  {
+    "symptom": "vomiting",
+    "follow_up_questions": [
+      "When did the vomiting start?",
+      "How many times has the child vomited?",
+      "Is the vomit forceful or projectile?",
+      "Is there blood or green (bilious) fluid in the vomit?",
+      "Is the child able to keep fluids down?",
+      "Any recent food intake or travel?",
+      "Any signs of dehydration (dry mouth, no urine)?"
+    ],
+    "red_flags_to_trigger": [
+      "Projectile vomiting in infant",
+      "Green or bloody vomit",
+      "Vomiting with signs of dehydration",
+      "No urine output >8 hours"
+    ]
+  },
+  {
+    "symptom": "rash",
+    "follow_up_questions": [
+      "When did the rash first appear?",
+      "Where on the body is the rash located?",
+      "Is the rash itchy or painful?",
+      "Has the child had a fever?",
+      "Has the child started any new medications, soaps, or foods?",
+      "Has the rash spread or changed in appearance?",
+      "Are there blisters or open sores?"
+    ],
+    "red_flags_to_trigger": [
+      "Blistering rash",
+      "Rash with high fever",
+      "Rapidly spreading rash",
+      "Rash with breathing difficulty or swelling"
+    ]
+  }
+]

@@ -128,10 +128,10 @@ permission_handler: ^11.3.1 ✅
 ### **🔑 API CONFIGURATION**
 ```yaml
 ✅ All API Keys Configured:
-├── xAI Grok: xai-vThB4DDq8xkI66v7oaMoEncdi26gbTkH1GlljQtLAirnIaoBw40Z64GJlcIE2seRN2GqmXCoe5uFg55u
-├── OpenAI: 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
-├── OpenWeather: 8a980f7b1513487c34f50ef91ba283d7
-├── ML Kit: AIzaSyAgVMqJGEH0jsWwB0YiocWKBoebyXjdcCs
+├── xAI Grok: <GROK API Key>
+├── OpenAI: <OpenAI Key>
+├── OpenWeather: <OpenWeather Key>
+├── ML Kit: <ML Kit>
 └── Firebase: beforedoctor-7666f (project configured)
 ```
 

@@ -1,0 +1,31 @@
+symptom,prompt_template,treatment_question
+fever,Child is {{child_age}} years old with fever. Please assess...,Has the fever lasted more than 3 days?
+fever,Child is {{child_age}} years old with fever. Please assess...,Is the child experiencing chills or sweating?
+fever,Child is {{child_age}} years old with fever. Please assess...,Have you given any fever-reducing medication?
+cough,Child is {{child_age}} years old with cough. Please assess...,Is the cough dry or wet?
+cough,Child is {{child_age}} years old with cough. Please assess...,Is the cough worse at night?
+cough,Child is {{child_age}} years old with cough. Please assess...,Is there any wheezing or difficulty breathing?
+vomiting,Child is {{child_age}} years old with vomiting. Please assess...,How many times has the child vomited?
+vomiting,Child is {{child_age}} years old with vomiting. Please assess...,Is the vomiting associated with meals?
+vomiting,Child is {{child_age}} years old with vomiting. Please assess...,Is there any blood or bile in the vomit?
+diarrhea,Child is {{child_age}} years old with diarrhea. Please assess...,How frequent are the stools?
+diarrhea,Child is {{child_age}} years old with diarrhea. Please assess...,Is there any mucus or blood in the stool?
+diarrhea,Child is {{child_age}} years old with diarrhea. Please assess...,Is the child drinking enough fluids?
+ear pain,Child is {{child_age}} years old with ear pain. Please assess...,Is the child pulling at the ear?
+ear pain,Child is {{child_age}} years old with ear pain. Please assess...,Is there any fluid or discharge from the ear?
+ear pain,Child is {{child_age}} years old with ear pain. Please assess...,Has the child had a recent cold or congestion?
+rash,Child is {{child_age}} years old with rash. Please assess...,When did the rash start?
+rash,Child is {{child_age}} years old with rash. Please assess...,Is the rash itchy or painful?
+rash,Child is {{child_age}} years old with rash. Please assess...,Has the child had a fever with the rash?
+sore throat,Child is {{child_age}} years old with sore throat. Please assess...,Is the throat pain worse when swallowing?
+sore throat,Child is {{child_age}} years old with sore throat. Please assess...,Is the child drooling or refusing to eat?
+sore throat,Child is {{child_age}} years old with sore throat. Please assess...,Has the child had a fever or headache?
+runny nose,Child is {{child_age}} years old with runny nose. Please assess...,Is the nasal discharge clear or colored?
+runny nose,Child is {{child_age}} years old with runny nose. Please assess...,Has the child had any sneezing or itching?
+runny nose,Child is {{child_age}} years old with runny nose. Please assess...,Is the child having trouble sleeping due to congestion?
+congestion,Child is {{child_age}} years old with congestion. Please assess...,Is the congestion constant or intermittent?
+congestion,Child is {{child_age}} years old with congestion. Please assess...,Has it been affecting feeding or sleep?
+congestion,Child is {{child_age}} years old with congestion. Please assess...,Is there associated ear pain or pressure?
+headache,Child is {{child_age}} years old with headache. Please assess...,How long has the headache lasted?
+headache,Child is {{child_age}} years old with headache. Please assess...,Is the pain localized or all over?
+headache,Child is {{child_age}} years old with headache. Please assess...,Is there sensitivity to light or sound?
