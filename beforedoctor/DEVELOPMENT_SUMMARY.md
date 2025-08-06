@@ -128,8 +128,8 @@ permission_handler: ^11.3.1 ✅
 ### **🔑 API CONFIGURATION**
 ```yaml
 ✅ All API Keys Configured:
-├── xAI Grok: <GROK API Key>
-├── OpenAI: <OpenAI Key>
+├── xAI Grok: [API_KEY_PLACEHOLDER]
+├── OpenAI: [API_KEY_PLACEHOLDER]
 ├── OpenWeather: <OpenWeather Key>
 ├── ML Kit: <ML Kit>
 └── Firebase: beforedoctor-7666f (project configured)
