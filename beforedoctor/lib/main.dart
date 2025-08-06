@@ -5,6 +5,7 @@ import 'core/config/app_config.dart';
 import 'theme/pediatric_theme.dart';
 import 'features/voice/presentation/screens/voice_logging_screen.dart';
 import 'features/voice/presentation/screens/voice_logger_screen.dart';
+import 'features/character/presentation/screens/doctor_character_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -172,10 +173,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 _buildFeatureCard(
                   icon: Icons.person,
-                  title: 'Character Chat',
-                  subtitle: 'Interactive doctor avatar',
+                  title: 'Dr. Healthie',
+                  subtitle: '3D Character Experience',
                   color: Colors.purple,
-                  onTap: () => _showFeatureComingSoon('Character Chat'),
+                  onTap: () => _navigateToDoctorCharacter(),
                 ),
               ],
             ),
@@ -371,6 +372,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const VoiceLoggerScreen(),
+      ),
+    );
+  }
+
+  void _navigateToDoctorCharacter() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DoctorCharacterScreen(),
       ),
     );
   }

@@ -74,6 +74,9 @@ dependencies:
   
   # Platform-specific
   permission_handler: ^11.3.1  # iOS/Android permissions
+  
+  # 3D Character Integration
+  webview_flutter: ^4.7.0  # WebView for 3D character rendering
 
 dev_dependencies:
   flutter_test:
