@@ -141,10 +141,12 @@ class LoggingService {
             final jsonStr = line.substring(dataStart);
             final data = Map<String, dynamic>.from(
               // Simple parsing for demo - in production use proper JSON parsing
-              jsonStr.replaceAll('{', '').replaceAll('}', '').split(',')
-                  .map((e) => e.trim().split(':'))
-                  .where((e) => e.length == 2)
-                  .map((e) => MapEntry(e[0].trim(), e[1].trim()))
+              Map.fromEntries(
+                jsonStr.replaceAll('{', '').replaceAll('}', '').split(',')
+                    .map((e) => e.trim().split(':'))
+                    .where((e) => e.length == 2)
+                    .map((e) => MapEntry(e[0].trim(), e[1].trim()))
+              )
             );
             interactions.add(data);
           }

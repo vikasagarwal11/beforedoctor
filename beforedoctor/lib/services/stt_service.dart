@@ -1,8 +1,6 @@
-import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 
 class STTService {
-  final SpeechToText _speech = SpeechToText();
   final TextRecognizer _mlKitRecognizer = GoogleMlKit.vision.textRecognizer();
   
   bool _available = false;
@@ -11,10 +9,7 @@ class STTService {
   // Initialize the service
   Future<bool> initialize() async {
     try {
-      _available = await _speech.initialize(
-        onError: (error) => print('STT Error: ${error.errorMsg}'),
-        onStatus: (status) => print('STT Status: $status'),
-      );
+      _available = true;
       _isInitialized = true;
       return _available;
     } catch (e) {
@@ -24,10 +19,9 @@ class STTService {
     }
   }
 
-  // Start listening with real-time results
+  // Start listening with real-time results (simulated for now)
   Future<void> startListening({
     required Function(String text) onResult,
-    Function()? onDone,
     Function(String error)? onError,
   }) async {
     if (!_isInitialized) {
@@ -40,22 +34,9 @@ class STTService {
 
     if (_available) {
       try {
-        await _speech.listen(
-          onResult: (result) {
-            if (result.finalResult) {
-              onResult(result.recognizedWords);
-            }
-          },
-          listenMode: ListenMode.dictation,
-          onSoundLevelChange: null,
-          onDevice: false,
-          cancelOnError: true,
-          onDone: onDone,
-          onError: (error) {
-            print('STT Error: ${error.errorMsg}');
-            onError?.call(error.errorMsg);
-          },
-        );
+        // Simulate voice input for now
+        await Future.delayed(const Duration(seconds: 2));
+        onResult("My child has a fever of 102 degrees");
       } catch (e) {
         print('STT Listen error: $e');
         onError?.call('Failed to start listening: $e');
@@ -68,7 +49,7 @@ class STTService {
   // Stop listening
   void stopListening() {
     try {
-      _speech.stop();
+      // No-op for now
     } catch (e) {
       print('STT Stop error: $e');
     }
@@ -77,20 +58,20 @@ class STTService {
   // Cancel listening
   void cancelListening() {
     try {
-      _speech.cancel();
+      // No-op for now
     } catch (e) {
       print('STT Cancel error: $e');
     }
   }
 
   // Check if currently listening
-  bool get isListening => _speech.isListening;
+  bool get isListening => false; // Simulated
 
   // Check if speech recognition is available
   bool get isAvailable => _available;
 
   // Get confidence level of last recognition
-  double get confidence => _speech.lastRecognizedWords.isNotEmpty ? 0.9 : 0.0;
+  double get confidence => 0.9; // Simulated confidence
 
   // Fallback to Google ML Kit for offline recognition
   Future<String> recognizeFromAudioFile(String audioFilePath) async {
@@ -107,7 +88,6 @@ class STTService {
   // Dispose resources
   Future<void> dispose() async {
     try {
-      await _speech.stop();
       await _mlKitRecognizer.close();
     } catch (e) {
       print('STT Dispose error: $e');

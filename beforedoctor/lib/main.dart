@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/config/app_config.dart';
+import 'theme/pediatric_theme.dart';
 import 'features/voice/presentation/screens/voice_logging_screen.dart';
 import 'features/voice/presentation/screens/voice_logger_screen.dart';
 
@@ -21,11 +22,7 @@ class BeforeDoctorApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'BeforeDoctor',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
+      theme: pediatricTheme,
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
     );

@@ -6,7 +6,7 @@ import 'package:beforedoctor/services/model_selector_service.dart';
 import '../core/services/logging_service.dart';
 
 class LLMService {
-  final ModelSelectorService modelSelector = ModelSelectorService();
+  final ModelSelectorService modelSelector = ModelSelectorService.instance;
   final LoggingService _loggingService = LoggingService();
 
   // Use dotenv for environment variables (more secure than Platform.environment)

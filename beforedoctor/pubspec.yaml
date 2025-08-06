@@ -40,7 +40,7 @@ dependencies:
   
   # Voice & AI
   google_ml_kit: ^0.18.0  # Offline STT/translation
-  speech_to_text: ^6.6.0  # Real-time voice input
+  # speech_to_text: ^6.6.0  # Real-time voice input (temporarily disabled)
   dart_openai: ^5.1.0  # OpenAI Realtime Audio (fallback)
   http: ^1.2.2  # xAI API, OpenWeather, ElevenLabs API calls
   
@@ -53,9 +53,10 @@ dependencies:
   # UI Components
   flutter_animate: ^4.5.0  # Animations (FadeTransition)
   lottie: ^3.1.2  # Micro-interactions
+  getwidget: ^4.0.0  # Modern UI components
   
   # Animated Character
-  # rive: ^0.12.4  # Rive animations
+  rive: ^0.12.4  # Rive animations
   flutter_tts: ^3.8.3  # Text-to-speech
   
   # AI Singing Response
