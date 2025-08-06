@@ -40,7 +40,9 @@ dependencies:
   
   # Voice & AI
   google_ml_kit: ^0.18.0  # Offline STT/translation
-  speech_to_text: ^6.6.0  # Real-time voice input
+  google_mlkit_translation: ^0.11.1  # Offline translation
+  google_mlkit_language_id: ^0.11.1  # Language detection
+  speech_to_text: ^6.3.0  # Real-time voice input
   dart_openai: ^5.1.0  # OpenAI Realtime Audio (fallback)
   http: ^1.2.2  # xAI API, OpenWeather, ElevenLabs API calls
   

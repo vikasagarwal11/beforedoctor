@@ -4,12 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:beforedoctor/services/model_selector_service.dart';
 import '../core/services/logging_service.dart';
-import 'translation_service.dart';
 
 class LLMService {
   final ModelSelectorService modelSelector = ModelSelectorService.instance;
   final LoggingService _loggingService = LoggingService();
-  final TranslationService _translationService = TranslationService();
 
   // Use dotenv for environment variables (more secure than Platform.environment)
   final _openaiKey = dotenv.env['OPENAI_API_KEY'];
@@ -19,14 +17,10 @@ class LLMService {
   // Initialize the service
   Future<void> initialize() async {
     await modelSelector.initialize();
-    await _translationService.preloadCommonLanguages();
   }
 
-  // Enhanced method: Get AI response with automatic translation
-  Future<Map<String, dynamic>> getAIResponse(String prompt, {
-    String? symptom,
-    String? originalTranscript,
-  }) async {
+  // Main method for getting AI response with auto-selection and fallback
+  Future<String> getAIResponse(String prompt) async {
     final startTime = DateTime.now();
     
     // Get the best model based on performance history
@@ -47,13 +41,7 @@ class LLMService {
         success: true,
         promptType: 'medical_symptom',
       );
-      
-      return {
-        'response': response['text'],
-        'model_used': primaryModel.name,
-        'latency_ms': responseTime,
-        'success': true,
-      };
+      return response['text'];
     }
 
     // Try fallback model
@@ -67,13 +55,7 @@ class LLMService {
         success: true,
         promptType: 'medical_symptom',
       );
-      
-      return {
-        'response': fallbackResponse['text'],
-        'model_used': fallbackModel.name,
-        'latency_ms': responseTime,
-        'success': true,
-      };
+      return fallbackResponse['text'];
     }
 
     // If both fail, return fallback response
@@ -84,24 +66,7 @@ class LLMService {
       promptType: 'medical_symptom',
     );
     
-    final fallbackText = generateFallbackResponse(prompt);
-    return {
-      'response': fallbackText,
-      'model_used': 'fallback',
-      'latency_ms': responseTime,
-      'success': false,
-    };
-  }
-
-  // Backward compatibility method for simple string response
-  Future<String> getAIResponseSimple(String prompt) async {
-    final result = await getAIResponse(prompt);
-    return result['response'] ?? 'No response available';
-  }
-
-  // Main method for getting AI response with auto-selection and fallback (legacy)
-  Future<String> getAIResponseLegacy(String prompt) async {
-    return await getAIResponseSimple(prompt);
+    return generateFallbackResponse(prompt);
   }
 
   // Public method for calling specific models

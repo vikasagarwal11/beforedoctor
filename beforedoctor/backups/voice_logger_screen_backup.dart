@@ -146,60 +146,6 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
     setState(() => _isListening = false);
   }
 
-  // Enhanced method: Start listening with auto-detection and streamlined processing
-  Future<void> _startListeningWithAutoDetection() async {
-    if (_isListening) return;
-
-    setState(() {
-      _isListening = true;
-      _recognizedText = '';
-      _aiResponse = '';
-      _multiSymptomAnalysis = null;
-      _symptomExtractionResult = null;
-      _treatmentRecommendation = null;
-    });
-
-    try {
-      // Use the new streamlined method
-      final result = await _stt.listenAndDetectLanguage();
-      
-      setState(() {
-        _recognizedText = result['transcript'];
-        _symptomController.text = result['transcript'];
-        _detectedLanguage = result['language'];
-        _isListening = false;
-      });
-      
-      print('🌍 Voice input detected language: ${result['language']} for: "${result['transcript']}"');
-      
-      // Auto-process the symptom if we have a transcript
-      if (result['transcript'].isNotEmpty) {
-        await _processSymptom(result['transcript']);
-      }
-      
-    } catch (e) {
-      setState(() {
-        _isListening = false;
-      });
-      
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('❌ Voice recognition error: $e'),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    }
-  }
-
   // Enhanced symptom processing with treatment recommendations
   Future<void> _processSymptom(String symptom) async {
     if (symptom.trim().isEmpty) {
@@ -219,23 +165,13 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       // Start character thinking animation
       _characterEngine.startThinking();
 
-      // Step 0: Auto-detect symptom if not provided
+      // Step 0: Process language and translate if needed (language already detected by STT)
       String processedSymptom = symptom;
-      if (processedSymptom.isEmpty && _recognizedText.isNotEmpty) {
-        // Auto-detect symptom from transcript using AI Prompt Service
-        final supportedSymptoms = _promptService.getSupportedSymptoms();
-        processedSymptom = supportedSymptoms.firstWhere(
-          (s) => _recognizedText.toLowerCase().contains(s.toLowerCase()),
-          orElse: () => 'general',
-        );
-        print('🔍 Auto-detected symptom: $processedSymptom from transcript: "$_recognizedText"');
-      }
       
-      // Step 0.5: Process language and translate if needed (language already detected by STT)
       if (_detectedLanguage != 'en') {
         // Translate user input to English for AI processing
         processedSymptom = await _translationService.translateUserInput(
-          userInput: processedSymptom,
+          userInput: symptom,
           userLanguage: _detectedLanguage,
         );
         print('🌍 Translated user input: "$symptom" → "$processedSymptom" (detected: $_detectedLanguage)');
@@ -297,10 +233,8 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       
       switch (_selectedModel) {
         case 'auto':
-          final result = await _llmService.getAIResponse(prompt);
-          llmResponse = result['response'];
-          modelUsed = result['model_used'];
-          latencyMs = result['latency_ms'];
+          llmResponse = await _llmService.getAIResponse(prompt);
+          modelUsed = 'auto_selected';
           break;
         case 'openai':
           llmResponse = await _llmService.callOpenAI(prompt);
@@ -317,9 +251,7 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
           break;
       }
 
-      if (latencyMs == 0) {
-        latencyMs = DateTime.now().difference(startTime).inMilliseconds;
-      }
+      latencyMs = DateTime.now().difference(startTime).inMilliseconds;
       
       // Calculate a simple score based on response quality
       score = _calculateResponseScore(llmResponse, latencyMs);
@@ -1021,33 +953,6 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                 ),
               ),
             ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // New Streamlined Voice Button
-          Container(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: Icon(_isListening ? Icons.stop : Icons.auto_awesome),
-              label: Text(_isListening ? 'Stop Auto-Detect' : '🚀 Auto-Detect & Analyze'),
-              onPressed: (_isProcessing || _isListening) ? null : () {
-                if (_isListening) {
-                  _stopListening();
-                } else {
-                  _startListeningWithAutoDetection();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isListening ? Colors.orange : Colors.purple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                elevation: 3,
-              ),
-            ),
           ),
 
           const SizedBox(height: 20),

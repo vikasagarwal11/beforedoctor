@@ -1,8 +1,7 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+
 
 class MultiSymptomAnalyzer {
-  static const String _symptomCorrelationDataPath = 'assets/data/symptom_correlation_matrix.json';
+
   
   // Symptom correlation matrix for common pediatric conditions
   final Map<String, Map<String, double>> _symptomCorrelations = {
@@ -291,15 +290,23 @@ class MultiSymptomAnalyzer {
     // Temperature factor
     if (temperature != null) {
       final temp = double.tryParse(temperature) ?? 0;
-      if (temp >= 104) score += 2.0; // High fever
-      else if (temp >= 102) score += 1.5; // Moderate fever
-      else if (temp >= 100.4) score += 1.0; // Low fever
+      if (temp >= 104) {
+        score += 2.0; // High fever
+      } else if (temp >= 102) {
+        score += 1.5; // Moderate fever
+      } else if (temp >= 100.4) {
+        score += 1.0; // Low fever
+      }
     }
     
     // Duration factor
     if (duration != null) {
-      if (duration.contains('week')) score += 0.5;
-      if (duration.contains('day') && !duration.contains('today')) score += 0.3;
+      if (duration.contains('week')) {
+        score += 0.5;
+      }
+      if (duration.contains('day') && !duration.contains('today')) {
+        score += 0.3;
+      }
     }
     
     // Emergency condition multiplier

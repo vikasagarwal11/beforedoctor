@@ -537,7 +537,7 @@ packages:
     source: hosted
     version: "0.12.1"
   google_mlkit_language_id:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_mlkit_language_id
       sha256: "75dc3b0857cd3537b3156e108baf84cefff1113e3895ffd31e876962342bf520"
@@ -585,7 +585,7 @@ packages:
     source: hosted
     version: "0.13.1"
   google_mlkit_translation:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_mlkit_translation
       sha256: f35f270afba775bd7c9864cf167fa60113144e900eab74ec7a7cc5eaead72520

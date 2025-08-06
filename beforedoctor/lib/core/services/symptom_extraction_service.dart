@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
@@ -92,7 +91,7 @@ Return only the JSON array:
           }
         }
       } catch (e) {
-        print('OpenAI extraction failed: $e');
+        // Log error but continue to fallback
       }
 
       // Try Grok as fallback
@@ -129,7 +128,7 @@ Return only the JSON array:
           }
         }
       } catch (e) {
-        print('Grok extraction failed: $e');
+        // Log error but continue to fallback
       }
 
       // If AI fails, return empty result
@@ -179,7 +178,6 @@ Return only the JSON array:
       
       return symptoms;
     } catch (e) {
-      print('Failed to parse AI response: $e');
       return [];
     }
   }

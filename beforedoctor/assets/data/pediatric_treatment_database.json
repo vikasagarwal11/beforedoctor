@@ -1,0 +1,384 @@
+{
+  "medications": {
+    "acetaminophen": {
+      "generic_name": "Acetaminophen",
+      "brand_names": ["Tylenol", "Tempra", "Panadol"],
+      "age_groups": {
+        "infant": {
+          "dosage": "10-15 mg/kg every 4-6 hours",
+          "max_daily": "75 mg/kg/day",
+          "safety_notes": "Do not use for children under 3 months without doctor approval",
+          "forms": ["drops", "suspension"],
+          "indications": ["fever", "pain"],
+          "contraindications": ["liver_disease", "allergy"]
+        },
+        "toddler": {
+          "dosage": "10-15 mg/kg every 4-6 hours",
+          "max_daily": "75 mg/kg/day",
+          "safety_notes": "Use weight-based dosing, not age-based",
+          "forms": ["suspension", "chewable"],
+          "indications": ["fever", "pain"],
+          "contraindications": ["liver_disease", "allergy"]
+        },
+        "child": {
+          "dosage": "10-15 mg/kg every 4-6 hours",
+          "max_daily": "75 mg/kg/day",
+          "safety_notes": "Check for other medications containing acetaminophen",
+          "forms": ["suspension", "chewable", "tablets"],
+          "indications": ["fever", "pain"],
+          "contraindications": ["liver_disease", "allergy"]
+        }
+      }
+    },
+    "ibuprofen": {
+      "generic_name": "Ibuprofen",
+      "brand_names": ["Motrin", "Advil", "Brufen"],
+      "age_groups": {
+        "infant": {
+          "dosage": "5-10 mg/kg every 6-8 hours",
+          "max_daily": "40 mg/kg/day",
+          "safety_notes": "Not recommended for children under 6 months",
+          "forms": ["drops", "suspension"],
+          "indications": ["fever", "pain", "inflammation"],
+          "contraindications": ["stomach_ulcers", "kidney_disease", "allergy"]
+        },
+        "toddler": {
+          "dosage": "5-10 mg/kg every 6-8 hours",
+          "max_daily": "40 mg/kg/day",
+          "safety_notes": "Take with food to prevent stomach upset",
+          "forms": ["suspension", "chewable"],
+          "indications": ["fever", "pain", "inflammation"],
+          "contraindications": ["stomach_ulcers", "kidney_disease", "allergy"]
+        },
+        "child": {
+          "dosage": "5-10 mg/kg every 6-8 hours",
+          "max_daily": "40 mg/kg/day",
+          "safety_notes": "Take with food, avoid if child has stomach issues",
+          "forms": ["suspension", "chewable", "tablets"],
+          "indications": ["fever", "pain", "inflammation"],
+          "contraindications": ["stomach_ulcers", "kidney_disease", "allergy"]
+        }
+      }
+    },
+    "benadryl": {
+      "generic_name": "Diphenhydramine",
+      "brand_names": ["Benadryl", "Allerdryl"],
+      "age_groups": {
+        "toddler": {
+          "dosage": "1.25 mg/kg every 6 hours",
+          "max_daily": "6 doses per day",
+          "safety_notes": "May cause drowsiness, monitor for side effects",
+          "forms": ["liquid", "chewable"],
+          "indications": ["allergies", "itching", "hives"],
+          "contraindications": ["asthma", "glaucoma", "allergy"]
+        },
+        "child": {
+          "dosage": "1.25 mg/kg every 6 hours",
+          "max_daily": "6 doses per day",
+          "safety_notes": "May cause drowsiness, avoid before activities",
+          "forms": ["liquid", "chewable", "tablets"],
+          "indications": ["allergies", "itching", "hives"],
+          "contraindications": ["asthma", "glaucoma", "allergy"]
+        }
+      }
+    },
+    "pedialyte": {
+      "generic_name": "Oral Rehydration Solution",
+      "brand_names": ["Pedialyte", "Enfalyte", "Rehydralyte"],
+      "age_groups": {
+        "infant": {
+          "dosage": "1-2 oz every 15-30 minutes",
+          "max_daily": "As needed for hydration",
+          "safety_notes": "Safe for all ages, preferred over sports drinks",
+          "forms": ["liquid", "freezer_pops"],
+          "indications": ["dehydration", "vomiting", "diarrhea"],
+          "contraindications": ["none"]
+        },
+        "toddler": {
+          "dosage": "2-4 oz every 15-30 minutes",
+          "max_daily": "As needed for hydration",
+          "safety_notes": "Safe for all ages, preferred over sports drinks",
+          "forms": ["liquid", "freezer_pops"],
+          "indications": ["dehydration", "vomiting", "diarrhea"],
+          "contraindications": ["none"]
+        },
+        "child": {
+          "dosage": "4-8 oz every 15-30 minutes",
+          "max_daily": "As needed for hydration",
+          "safety_notes": "Safe for all ages, preferred over sports drinks",
+          "forms": ["liquid", "freezer_pops"],
+          "indications": ["dehydration", "vomiting", "diarrhea"],
+          "contraindications": ["none"]
+        }
+      }
+    }
+  },
+  "conditions": {
+    "fever": {
+      "definition": "Body temperature above normal range (100.4°F/38°C)",
+      "severity_levels": {
+        "mild": {
+          "temperature_range": "100.4-101.9°F",
+          "actions": [
+            "Monitor temperature",
+            "Offer fluids",
+            "Use acetaminophen or ibuprofen if needed",
+            "Keep child comfortable"
+          ]
+        },
+        "moderate": {
+          "temperature_range": "102-103.9°F",
+          "actions": [
+            "Use medication for fever control",
+            "Monitor for other symptoms",
+            "Contact doctor if fever lasts > 3 days",
+            "Watch for signs of serious illness"
+          ]
+        },
+        "severe": {
+          "temperature_range": "104°F and above",
+          "actions": [
+            "Seek immediate medical attention",
+            "Use medication while seeking care",
+            "Monitor for signs of serious illness",
+            "Consider emergency evaluation"
+          ]
+        }
+      },
+      "emergency_signs": [
+        "Temperature > 104°F (40°C)",
+        "Fever with stiff neck",
+        "Fever with severe headache",
+        "Fever with rash that doesn't fade",
+        "Fever in child under 3 months"
+      ],
+      "home_treatments": [
+        "Acetaminophen or ibuprofen",
+        "Lukewarm sponge bath",
+        "Light clothing",
+        "Extra fluids",
+        "Rest"
+      ]
+    },
+    "cough": {
+      "definition": "Sudden expulsion of air from lungs",
+      "types": {
+        "dry_cough": {
+          "description": "Non-productive cough without mucus",
+          "causes": ["viral_infection", "allergies", "irritants"],
+          "treatments": ["honey", "humidifier", "fluids", "rest"]
+        },
+        "wet_cough": {
+          "description": "Productive cough with mucus",
+          "causes": ["bacterial_infection", "viral_infection", "allergies"],
+          "treatments": ["fluids", "humidifier", "rest", "positioning"]
+        }
+      },
+      "emergency_signs": [
+        "Difficulty breathing",
+        "Wheezing or stridor",
+        "Cough with chest pain",
+        "Cough with fever > 101°F",
+        "Cough lasting > 2 weeks"
+      ],
+      "home_treatments": [
+        "Honey (for children > 1 year)",
+        "Warm fluids",
+        "Humidifier",
+        "Elevate head during sleep",
+        "Avoid cough suppressants in young children"
+      ]
+    },
+    "vomiting": {
+      "definition": "Forceful expulsion of stomach contents",
+      "severity_levels": {
+        "mild": {
+          "frequency": "1-2 times",
+          "actions": [
+            "Small sips of clear fluids",
+            "Wait 15-30 minutes between sips",
+            "Gradually increase fluid intake",
+            "Monitor for dehydration"
+          ]
+        },
+        "moderate": {
+          "frequency": "3-5 times",
+          "actions": [
+            "Oral rehydration solution",
+            "Small frequent sips",
+            "Contact doctor if unable to keep fluids down",
+            "Monitor closely"
+          ]
+        },
+        "severe": {
+          "frequency": "6+ times or unable to keep anything down",
+          "actions": [
+            "Seek medical attention",
+            "Consider IV fluids",
+            "Monitor for dehydration",
+            "Emergency evaluation if needed"
+          ]
+        }
+      },
+      "emergency_signs": [
+        "Unable to keep fluids down for > 8 hours",
+        "Signs of dehydration",
+        "Blood in vomit",
+        "Severe abdominal pain",
+        "Vomiting with fever > 102°F"
+      ],
+      "home_treatments": [
+        "Clear fluids only for first 2 hours",
+        "Gradual return to normal diet",
+        "Avoid dairy and fatty foods initially",
+        "Rest and monitor closely"
+      ]
+    },
+    "diarrhea": {
+      "definition": "Loose, watery stools occurring more frequently than usual",
+      "severity_levels": {
+        "mild": {
+          "frequency": "2-3 loose stools per day",
+          "actions": [
+            "Continue normal diet",
+            "Offer extra fluids",
+            "Monitor for dehydration",
+            "Good hand hygiene"
+          ]
+        },
+        "moderate": {
+          "frequency": "4-6 loose stools per day",
+          "actions": [
+            "Oral rehydration solution",
+            "Bland diet",
+            "Monitor closely",
+            "Contact doctor if worsening"
+          ]
+        },
+        "severe": {
+          "frequency": "7+ loose stools per day",
+          "actions": [
+            "Seek medical attention",
+            "Oral rehydration solution",
+            "Monitor for dehydration",
+            "Consider IV fluids"
+          ]
+        }
+      },
+      "emergency_signs": [
+        "Signs of dehydration",
+        "Blood in stool",
+        "Diarrhea lasting > 1 week",
+        "Severe abdominal pain",
+        "High fever with diarrhea"
+      ],
+      "home_treatments": [
+        "Continue normal diet",
+        "Offer extra fluids",
+        "Monitor diaper output",
+        "Good hand hygiene",
+        "Probiotics may help"
+      ]
+    }
+  },
+  "emergency_protocols": {
+    "difficulty_breathing": {
+      "definition": "Child is struggling to breathe or breathing rapidly",
+      "immediate_actions": [
+        "Call emergency services immediately",
+        "Keep child calm and upright",
+        "Remove any tight clothing",
+        "Do not give anything by mouth"
+      ],
+      "signs_to_watch": [
+        "Rapid breathing",
+        "Retractions (sucking in between ribs)",
+        "Blue lips or face",
+        "Unable to speak or cry",
+        "Wheezing or stridor"
+      ],
+      "emergency_contact": "911"
+    },
+    "severe_allergic_reaction": {
+      "definition": "Life-threatening allergic response",
+      "immediate_actions": [
+        "Call emergency services immediately",
+        "Use epinephrine auto-injector if prescribed",
+        "Keep child lying down with legs elevated",
+        "Loosen tight clothing"
+      ],
+      "signs_to_watch": [
+        "Swelling of face, lips, tongue",
+        "Difficulty breathing",
+        "Hives or rash",
+        "Dizziness or fainting",
+        "Nausea or vomiting"
+      ],
+      "emergency_contact": "911"
+    },
+    "high_fever_with_stiff_neck": {
+      "definition": "Fever with neck stiffness, possible meningitis",
+      "immediate_actions": [
+        "Call emergency services immediately",
+        "Do not give medication",
+        "Keep child comfortable",
+        "Monitor breathing"
+      ],
+      "signs_to_watch": [
+        "Stiff neck",
+        "Severe headache",
+        "Sensitivity to light",
+        "Confusion or lethargy",
+        "Rash that doesn't fade with pressure"
+      ],
+      "emergency_contact": "911"
+    }
+  },
+  "age_specific_guidelines": {
+    "infant": {
+      "age_range": "0-12 months",
+      "special_considerations": [
+        "Higher risk for serious infections",
+        "Limited communication abilities",
+        "Rapid deterioration possible",
+        "Strict medication dosing required"
+      ],
+      "emergency_thresholds": {
+        "fever": "Any fever in child under 3 months",
+        "dehydration": "Fewer than 6 wet diapers in 24 hours",
+        "breathing": "Any difficulty breathing",
+        "feeding": "Refusing to eat or drink"
+      }
+    },
+    "toddler": {
+      "age_range": "1-3 years",
+      "special_considerations": [
+        "Limited ability to describe symptoms",
+        "High risk of dehydration",
+        "Common viral infections",
+        "Need for close monitoring"
+      ],
+      "emergency_thresholds": {
+        "fever": "Temperature > 104°F",
+        "dehydration": "No tears when crying",
+        "breathing": "Rapid or labored breathing",
+        "feeding": "Refusing all fluids for > 8 hours"
+      }
+    },
+    "child": {
+      "age_range": "4-12 years",
+      "special_considerations": [
+        "Better communication abilities",
+        "More accurate symptom reporting",
+        "Standard medication dosing",
+        "School attendance considerations"
+      ],
+      "emergency_thresholds": {
+        "fever": "Temperature > 104°F",
+        "dehydration": "Dark urine, dry mouth",
+        "breathing": "Difficulty breathing",
+        "feeding": "Unable to keep fluids down"
+      }
+    }
+  }
+} 

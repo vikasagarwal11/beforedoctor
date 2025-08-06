@@ -1,562 +1,652 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../config/app_config.dart';
+import 'package:flutter/services.dart';
 
 class TreatmentRecommendationService {
-  static TreatmentRecommendationService? _instance;
-  static TreatmentRecommendationService get instance => _instance ??= TreatmentRecommendationService._internal();
-
-  TreatmentRecommendationService._internal();
-
-  final AppConfig _config = AppConfig.instance;
-
-  // Medication database with age-appropriate dosing
-  static const Map<String, Map<String, dynamic>> _medicationDatabase = {
-    'acetaminophen': {
-      'dosing': '10-15 mg/kg every 4-6 hours',
-      'max_daily': '75 mg/kg/day',
-      'age_restrictions': 'Safe from birth',
-      'precautions': 'Check liver function if long-term use',
-      'brand_names': ['Tylenol', 'Tempra']
-    },
-    'ibuprofen': {
-      'dosing': '5-10 mg/kg every 6-8 hours',
-      'max_daily': '40 mg/kg/day',
-      'age_restrictions': '6 months and older',
-      'precautions': 'Avoid if dehydrated, kidney issues',
-      'brand_names': ['Motrin', 'Advil']
-    },
-    'amoxicillin': {
-      'dosing': '40 mg/kg/day divided 2-3 times',
-      'duration': '10 days',
-      'indications': 'Bacterial infections (strep, ear infections)',
-      'prescription_required': true
-    },
-    'albuterol': {
-      'dosing': '2-4 puffs every 4-6 hours',
-      'indications': 'Asthma, croup',
-      'age_restrictions': 'All ages',
-      'prescription_required': true
-    },
-    'dextromethorphan': {
-      'dosing': '1-2 mg/kg every 6-8 hours',
-      'age_restrictions': '4 years and older',
-      'indications': 'Dry cough',
-      'brand_names': ['Robitussin DM']
-    },
-    'honey': {
-      'dosing': '1/2 to 1 teaspoon as needed',
-      'age_restrictions': '1 year and older',
-      'precautions': 'Never give honey to infants <1 year (botulism risk)',
-      'indications': 'Cough relief'
-    }
-  };
-
-  // Home remedies database
-  static const Map<String, List<String>> _homeRemedies = {
-    'fever': [
-      'Keep child hydrated (Pedialyte)',
-      'Dress lightly, avoid bundling',
-      'Lukewarm sponge baths (not cold)',
-      'Rest in cool environment',
-      'Monitor for dehydration signs'
-    ],
-    'cough': [
-      'Humidified air (cool-mist humidifier)',
-      'Honey (1 tsp for ages >1 year, at bedtime)',
-      'Elevate head while sleeping',
-      'Avoid smoke/secondhand exposure',
-      'Warm fluids (tea with honey for older children)'
-    ],
-    'vomiting': [
-      'Small sips of clear fluids (Pedialyte)',
-      'Bland diet (BRAT: bananas, rice, applesauce, toast)',
-      'Rest, avoid dairy/sugary foods',
-      'Gradual return to normal diet'
-    ],
-    'diarrhea': [
-      'Hydration (ORS solution)',
-      'Probiotics (yogurt)',
-      'Avoid dairy/caffeine',
-      'BRAT diet',
-      'Monitor for dehydration'
-    ],
-    'ear_pain': [
-      'Warm compress on ear',
-      'Elevate head while sleeping',
-      'Avoid water in ear',
-      'Pain relief with ibuprofen'
-    ],
-    'sore_throat': [
-      'Saltwater gargle (1/4 tsp salt in water, ages >6)',
-      'Honey-lemon tea',
-      'Lozenges (ages >5)',
-      'Warm fluids'
-    ],
-    'rash': [
-      'Oatmeal baths',
-      'Cool compresses',
-      'Avoid scratching',
-      'Identify and avoid triggers'
-    ],
-    'headache': [
-      'Dark quiet room',
-      'Cold compress',
-      'Hydration',
-      'Regular sleep',
-      'Avoid screens/caffeine'
-    ]
-  };
-
-  // Red flags database
-  static const Map<String, List<String>> _redFlags = {
-    'fever': [
-      'Fever >3 days (or >24 hours in infants <3 months)',
-      'Fever >104°F',
-      'Fever with rash/stiff neck',
-      'Fever with altered mental status',
-      'Fever in immunocompromised child'
-    ],
-    'breathing_difficulty': [
-      'Any breathing difficulty is urgent',
-      'Blue lips or labored breathing (call 911)',
-      'Using extra muscles to breathe',
-      'Fast breathing with nostril flaring',
-      'Audible wheezing or stridor'
-    ],
-    'vomiting': [
-      '>6 episodes/day',
-      'Blood or bile in vomit',
-      'Signs of dehydration',
-      'Projectile vomiting in infants 2-8 weeks',
-      'Vomiting with severe headache'
-    ],
-    'diarrhea': [
-      'Bloody stools',
-      '>10 episodes/day',
-      'Signs of dehydration',
-      'Diarrhea lasting >2 weeks',
-      'Recent antibiotic use'
-    ],
-    'rash': [
-      'Spreading rapidly',
-      'Fever with rash',
-      'Blistering or petechiae',
-      'Rash with difficulty breathing',
-      'Rash covering large body areas'
-    ],
-    'headache': [
-      'Sudden or severe headache',
-      'Headache with vomiting',
-      'Headache with neck stiffness',
-      'Headache after head injury',
-      'Worst headache of life'
-    ]
-  };
-
-  // Generate treatment recommendation using AI
-  Future<TreatmentRecommendation> generateTreatmentRecommendation(
-    String symptom, 
-    int age, 
-    Map<String, dynamic> context
-  ) async {
-    try {
-      final prompt = _buildTreatmentPrompt(symptom, age, context);
-      final response = await _callOpenAI(prompt);
-      
-      return _parseTreatmentResponse(response, symptom, age);
-    } catch (e) {
-      // Fallback to rule-based recommendations
-      return _generateRuleBasedTreatment(symptom, age, context);
-    }
-  }
-
-  // Build AI prompt for treatment recommendation
-  String _buildTreatmentPrompt(String symptom, int age, Map<String, dynamic> context) {
-    return '''
-    As a pediatrician, based on the following information, provide a comprehensive treatment recommendation:
-    
-    Symptom: $symptom
-    Age: $age years
-    Context: ${jsonEncode(context)}
-    
-    Please provide:
-    1. **Diagnosis**: Most likely cause
-    2. **Treatment Recommendations**:
-       - OTC medications (with age-appropriate dosing)
-       - Prescription medications (if needed)
-       - Home remedies
-       - Precautions
-    3. **Red flags** to watch for
-    4. **When to see doctor**
-    
-    **IMPORTANT**: Include this disclaimer:
-    "Based on my knowledge as a simulated pediatrician, this is my suggested diagnosis and treatment. If you're not sure or symptoms persist, always reach out to your doctor or seek immediate medical care."
-    
-    Make response conversational, like a doctor talking to parent/patient.
-    ''';
-  }
-
-  // Call OpenAI API for treatment recommendation
-  Future<String> _callOpenAI(String prompt) async {
-    final response = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${_config.openaiApiKey}',
+  // Age-specific medication dosages and safety guidelines
+  final Map<String, Map<String, dynamic>> _ageMedicationGuidelines = {
+    'infant': {
+      'acetaminophen': {
+        'dosage': '10-15 mg/kg every 4-6 hours',
+        'max_daily': '75 mg/kg/day',
+        'safety_notes': 'Do not use for children under 3 months without doctor approval',
+        'forms': ['drops', 'suspension'],
       },
-      body: jsonEncode({
-        'model': 'gpt-4o',
-        'messages': [
-          {
-            'role': 'system',
-            'content': 'You are a board-certified pediatrician with expertise in treating children of all ages. Provide evidence-based treatment recommendations with appropriate disclaimers.'
-          },
-          {
-            'role': 'user',
-            'content': prompt
+      'ibuprofen': {
+        'dosage': '5-10 mg/kg every 6-8 hours',
+        'max_daily': '40 mg/kg/day',
+        'safety_notes': 'Not recommended for children under 6 months',
+        'forms': ['drops', 'suspension'],
+      },
+      'pedialyte': {
+        'dosage': '1-2 oz every 15-30 minutes',
+        'max_daily': 'As needed for hydration',
+        'safety_notes': 'Safe for all ages, preferred over sports drinks',
+        'forms': ['liquid', 'freezer_pops'],
+      },
+    },
+    'toddler': {
+      'acetaminophen': {
+        'dosage': '10-15 mg/kg every 4-6 hours',
+        'max_daily': '75 mg/kg/day',
+        'safety_notes': 'Use weight-based dosing, not age-based',
+        'forms': ['suspension', 'chewable'],
+      },
+      'ibuprofen': {
+        'dosage': '5-10 mg/kg every 6-8 hours',
+        'max_daily': '40 mg/kg/day',
+        'safety_notes': 'Take with food to prevent stomach upset',
+        'forms': ['suspension', 'chewable'],
+      },
+      'benadryl': {
+        'dosage': '1.25 mg/kg every 6 hours',
+        'max_daily': '6 doses per day',
+        'safety_notes': 'May cause drowsiness, monitor for side effects',
+        'forms': ['liquid', 'chewable'],
+      },
+    },
+    'child': {
+      'acetaminophen': {
+        'dosage': '10-15 mg/kg every 4-6 hours',
+        'max_daily': '75 mg/kg/day',
+        'safety_notes': 'Check for other medications containing acetaminophen',
+        'forms': ['suspension', 'chewable', 'tablets'],
+      },
+      'ibuprofen': {
+        'dosage': '5-10 mg/kg every 6-8 hours',
+        'max_daily': '40 mg/kg/day',
+        'safety_notes': 'Take with food, avoid if child has stomach issues',
+        'forms': ['suspension', 'chewable', 'tablets'],
+      },
+      'benadryl': {
+        'dosage': '1.25 mg/kg every 6 hours',
+        'max_daily': '6 doses per day',
+        'safety_notes': 'May cause drowsiness, avoid before activities',
+        'forms': ['liquid', 'chewable', 'tablets'],
+      },
+    },
+  };
+
+  // Condition-specific treatment protocols
+  final Map<String, Map<String, dynamic>> _conditionTreatments = {
+    'fever': {
+      'immediate_actions': [
+        'Remove excess clothing',
+        'Offer cool fluids',
+        'Use lukewarm sponge bath if temperature > 104°F',
+        'Monitor for signs of serious illness',
+      ],
+      'medications': ['acetaminophen', 'ibuprofen'],
+      'when_to_seek_care': [
+        'Temperature > 104°F (40°C)',
+        'Fever lasting > 3 days',
+        'Child appears very ill',
+        'Fever with rash',
+        'Age < 3 months with any fever',
+      ],
+      'home_care': [
+        'Rest and fluids',
+        'Light clothing',
+        'Monitor temperature every 4 hours',
+        'Keep child comfortable',
+      ],
+    },
+    'cough': {
+      'immediate_actions': [
+        'Increase humidity in room',
+        'Offer honey (for children > 1 year)',
+        'Elevate head during sleep',
+        'Encourage fluids',
+      ],
+      'medications': ['honey', 'humidifier'],
+      'when_to_seek_care': [
+        'Difficulty breathing',
+        'Cough lasting > 2 weeks',
+        'Cough with fever > 101°F',
+        'Cough with chest pain',
+        'Wheezing or stridor',
+      ],
+      'home_care': [
+        'Honey (1 tsp for children > 1 year)',
+        'Warm fluids',
+        'Humidifier in bedroom',
+        'Avoid cough suppressants in young children',
+      ],
+    },
+    'vomiting': {
+      'immediate_actions': [
+        'Start with small sips of clear fluids',
+        'Wait 15-30 minutes between sips',
+        'Gradually increase fluid intake',
+        'Monitor for signs of dehydration',
+      ],
+      'medications': ['pedialyte', 'oral_rehydration_solution'],
+      'when_to_seek_care': [
+        'Unable to keep fluids down for > 8 hours',
+        'Signs of dehydration',
+        'Blood in vomit',
+        'Severe abdominal pain',
+        'Vomiting with fever > 102°F',
+      ],
+      'home_care': [
+        'Clear fluids only for first 2 hours',
+        'Gradual return to normal diet',
+        'Avoid dairy and fatty foods initially',
+        'Rest and monitor closely',
+      ],
+    },
+    'diarrhea': {
+      'immediate_actions': [
+        'Continue breastfeeding/formula',
+        'Offer oral rehydration solution',
+        'Monitor for dehydration signs',
+        'Continue normal diet if tolerated',
+      ],
+      'medications': ['oral_rehydration_solution', 'probiotics'],
+      'when_to_seek_care': [
+        'Signs of dehydration',
+        'Blood in stool',
+        'Diarrhea lasting > 1 week',
+        'Severe abdominal pain',
+        'High fever with diarrhea',
+      ],
+      'home_care': [
+        'Continue normal diet',
+        'Offer extra fluids',
+        'Monitor diaper output',
+        'Good hand hygiene',
+      ],
+    },
+    'rash': {
+      'immediate_actions': [
+        'Keep area clean and dry',
+        'Avoid scratching',
+        'Use gentle soap',
+        'Apply cool compress if itchy',
+      ],
+      'medications': ['calamine_lotion', 'hydrocortisone_cream'],
+      'when_to_seek_care': [
+        'Rash with fever',
+        'Rash spreading rapidly',
+        'Blisters or open sores',
+        'Rash with difficulty breathing',
+        'Rash with joint pain',
+      ],
+      'home_care': [
+        'Keep area clean',
+        'Avoid irritants',
+        'Use gentle moisturizer',
+        'Monitor for changes',
+      ],
+    },
+    'ear_pain': {
+      'immediate_actions': [
+        'Apply warm compress to ear',
+        'Keep child upright',
+        'Offer pain medication',
+        'Monitor for fever',
+      ],
+      'medications': ['acetaminophen', 'ibuprofen'],
+      'when_to_seek_care': [
+        'Severe ear pain',
+        'Ear pain with fever',
+        'Drainage from ear',
+        'Ear pain lasting > 24 hours',
+        'Child pulling at ear constantly',
+      ],
+      'home_care': [
+        'Pain medication as needed',
+        'Warm compress',
+        'Keep ear dry',
+        'Monitor for fever',
+      ],
+    },
+  };
+
+  // Emergency protocols
+  final Map<String, Map<String, dynamic>> _emergencyProtocols = {
+    'difficulty_breathing': {
+      'immediate_actions': [
+        'Call emergency services immediately',
+        'Keep child calm and upright',
+        'Remove any tight clothing',
+        'Do not give anything by mouth',
+      ],
+      'signs_to_watch': [
+        'Rapid breathing',
+        'Retractions (sucking in between ribs)',
+        'Blue lips or face',
+        'Unable to speak or cry',
+        'Wheezing or stridor',
+      ],
+      'emergency_contact': '911',
+    },
+    'severe_allergic_reaction': {
+      'immediate_actions': [
+        'Call emergency services immediately',
+        'Use epinephrine auto-injector if prescribed',
+        'Keep child lying down with legs elevated',
+        'Loosen tight clothing',
+      ],
+      'signs_to_watch': [
+        'Swelling of face, lips, tongue',
+        'Difficulty breathing',
+        'Hives or rash',
+        'Dizziness or fainting',
+        'Nausea or vomiting',
+      ],
+      'emergency_contact': '911',
+    },
+    'high_fever_with_stiff_neck': {
+      'immediate_actions': [
+        'Call emergency services immediately',
+        'Do not give medication',
+        'Keep child comfortable',
+        'Monitor breathing',
+      ],
+      'signs_to_watch': [
+        'Stiff neck',
+        'Severe headache',
+        'Sensitivity to light',
+        'Confusion or lethargy',
+        'Rash that doesn\'t fade with pressure',
+      ],
+      'emergency_contact': '911',
+    },
+  };
+
+  /// Generate comprehensive treatment recommendations
+  Future<TreatmentRecommendation> generateRecommendations({
+    required List<String> symptoms,
+    required String childAge,
+    required String childGender,
+    required double severityScore,
+    List<String>? emergencyFlags,
+    String? temperature,
+    String? duration,
+  }) async {
+    try {
+      final ageGroup = _determineAgeGroup(childAge);
+      final treatments = <TreatmentProtocol>[];
+      final medications = <MedicationRecommendation>[];
+      final homeCare = <String>[];
+      final whenToSeekCare = <String>[];
+
+      // Generate symptom-specific treatments
+      for (final symptom in symptoms) {
+        final treatment = _getSymptomTreatment(symptom, ageGroup);
+        if (treatment != null) {
+          treatments.add(treatment);
+        }
+      }
+
+      // Generate medication recommendations
+      for (final symptom in symptoms) {
+        final meds = _getMedicationRecommendations(symptom, ageGroup, childAge);
+        medications.addAll(meds);
+      }
+
+      // Generate home care instructions
+      for (final symptom in symptoms) {
+        final care = _getHomeCareInstructions(symptom, ageGroup);
+        homeCare.addAll(care);
+      }
+
+      // Generate when to seek care criteria
+      for (final symptom in symptoms) {
+        final criteria = _getSeekCareCriteria(symptom, ageGroup);
+        whenToSeekCare.addAll(criteria);
+      }
+
+      // Add emergency protocols if needed
+      if (emergencyFlags != null && emergencyFlags.isNotEmpty) {
+        for (final flag in emergencyFlags) {
+          final emergency = _getEmergencyProtocol(flag);
+          if (emergency != null) {
+            treatments.add(emergency);
           }
-        ],
-        'max_tokens': 1000,
-        'temperature': 0.7,
-      }),
-    );
+        }
+      }
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['choices'][0]['message']['content'];
-    } else {
-      throw Exception('Failed to get treatment recommendation: ${response.statusCode}');
+      // Add severity-based recommendations
+      final severityRecommendations = _getSeverityBasedRecommendations(
+        severityScore,
+        ageGroup,
+        temperature,
+        duration,
+      );
+
+      return TreatmentRecommendation(
+        treatments: treatments,
+        medications: medications,
+        homeCare: homeCare,
+        whenToSeekCare: whenToSeekCare,
+        severityRecommendations: severityRecommendations,
+        ageGroup: ageGroup,
+        childAge: childAge,
+        childGender: childGender,
+        severityScore: severityScore,
+        emergencyFlags: emergencyFlags ?? [],
+        temperature: temperature,
+        duration: duration,
+        timestamp: DateTime.now(),
+      );
+    } catch (e) {
+      throw Exception('Failed to generate treatment recommendations: $e');
     }
   }
 
-  // Parse AI response into structured treatment recommendation
-  TreatmentRecommendation _parseTreatmentResponse(String response, String symptom, int age) {
-    // Parse AI response and extract structured data
-    // This is a simplified parser - in production, use more robust parsing
-    return TreatmentRecommendation(
-      diagnosis: _extractDiagnosis(response),
-      otcMedications: _extractOTCMedications(response, age),
-      prescriptionMedications: _extractPrescriptionMedications(response),
-      homeRemedies: _getHomeRemedies(symptom),
-      precautions: _extractPrecautions(response),
-      redFlags: _getRedFlags(symptom),
-      whenToSeeDoctor: _extractWhenToSeeDoctor(response),
-      disclaimer: _getDisclaimer(),
-      aiResponse: response,
-    );
-  }
-
-  // Generate rule-based treatment as fallback
-  TreatmentRecommendation _generateRuleBasedTreatment(String symptom, int age, Map<String, dynamic> context) {
-    return TreatmentRecommendation(
-      diagnosis: _getRuleBasedDiagnosis(symptom),
-      otcMedications: _getRuleBasedOTCMedications(symptom, age),
-      prescriptionMedications: _getRuleBasedPrescriptionMedications(symptom),
-      homeRemedies: _getHomeRemedies(symptom),
-      precautions: _getRuleBasedPrecautions(symptom),
-      redFlags: _getRedFlags(symptom),
-      whenToSeeDoctor: _getRuleBasedWhenToSeeDoctor(symptom),
-      disclaimer: _getDisclaimer(),
-      aiResponse: 'Rule-based recommendation (AI unavailable)',
-    );
-  }
-
-  // Helper methods for parsing and rule-based recommendations
-  String _extractDiagnosis(String response) {
-    // Extract diagnosis from AI response
-    // Simplified implementation
-    if (response.toLowerCase().contains('viral')) return 'Viral infection';
-    if (response.toLowerCase().contains('bacterial')) return 'Bacterial infection';
-    return 'Symptom-based assessment';
-  }
-
-  List<Medication> _extractOTCMedications(String response, int age) {
-    // Extract OTC medications from AI response
-    final medications = <Medication>[];
-    
-    if (response.toLowerCase().contains('acetaminophen') || response.toLowerCase().contains('tylenol')) {
-      medications.add(Medication(
-        name: 'Acetaminophen',
-        dosing: _medicationDatabase['acetaminophen']!['dosing'],
-        ageRestrictions: _medicationDatabase['acetaminophen']!['age_restrictions'],
-        precautions: _medicationDatabase['acetaminophen']!['precautions'],
-        isOTC: true,
-      ));
+  /// Get symptom-specific treatment protocol
+  TreatmentProtocol? _getSymptomTreatment(String symptom, String ageGroup) {
+    final condition = _mapSymptomToCondition(symptom);
+    if (condition == null || !_conditionTreatments.containsKey(condition)) {
+      return null;
     }
+
+    final treatment = _conditionTreatments[condition]!;
+    return TreatmentProtocol(
+      condition: condition,
+      immediateActions: List<String>.from(treatment['immediate_actions'] ?? []),
+      medications: List<String>.from(treatment['medications'] ?? []),
+      whenToSeekCare: List<String>.from(treatment['when_to_seek_care'] ?? []),
+      homeCare: List<String>.from(treatment['home_care'] ?? []),
+      ageGroup: ageGroup,
+    );
+  }
+
+  /// Get medication recommendations for a symptom
+  List<MedicationRecommendation> _getMedicationRecommendations(
+    String symptom,
+    String ageGroup,
+    String childAge,
+  ) {
+    final recommendations = <MedicationRecommendation>[];
+    final condition = _mapSymptomToCondition(symptom);
     
-    if (response.toLowerCase().contains('ibuprofen') || response.toLowerCase().contains('motrin')) {
-      if (age >= 6) {
-        medications.add(Medication(
-          name: 'Ibuprofen',
-          dosing: _medicationDatabase['ibuprofen']!['dosing'],
-          ageRestrictions: _medicationDatabase['ibuprofen']!['age_restrictions'],
-          precautions: _medicationDatabase['ibuprofen']!['precautions'],
-          isOTC: true,
+    if (condition == null) return recommendations;
+
+    final treatment = _conditionTreatments[condition];
+    if (treatment == null) return recommendations;
+
+    final medications = List<String>.from(treatment['medications'] ?? []);
+    
+    for (final medication in medications) {
+      final guidelines = _ageMedicationGuidelines[ageGroup]?[medication];
+      if (guidelines != null) {
+        recommendations.add(MedicationRecommendation(
+          name: medication,
+          dosage: guidelines['dosage'] ?? '',
+          maxDaily: guidelines['max_daily'] ?? '',
+          safetyNotes: guidelines['safety_notes'] ?? '',
+          forms: List<String>.from(guidelines['forms'] ?? []),
+          ageGroup: ageGroup,
+          childAge: childAge,
         ));
       }
     }
-    
-    return medications;
+
+    return recommendations;
   }
 
-  List<Medication> _extractPrescriptionMedications(String response) {
-    // Extract prescription medications from AI response
-    final medications = <Medication>[];
+  /// Get home care instructions for a symptom
+  List<String> _getHomeCareInstructions(String symptom, String ageGroup) {
+    final condition = _mapSymptomToCondition(symptom);
+    if (condition == null || !_conditionTreatments.containsKey(condition)) {
+      return [];
+    }
+
+    final treatment = _conditionTreatments[condition]!;
+    return List<String>.from(treatment['home_care'] ?? []);
+  }
+
+  /// Get when to seek care criteria for a symptom
+  List<String> _getSeekCareCriteria(String symptom, String ageGroup) {
+    final condition = _mapSymptomToCondition(symptom);
+    if (condition == null || !_conditionTreatments.containsKey(condition)) {
+      return [];
+    }
+
+    final treatment = _conditionTreatments[condition]!;
+    return List<String>.from(treatment['when_to_seek_care'] ?? []);
+  }
+
+  /// Get emergency protocol
+  TreatmentProtocol? _getEmergencyProtocol(String emergencyFlag) {
+    if (!_emergencyProtocols.containsKey(emergencyFlag)) {
+      return null;
+    }
+
+    final protocol = _emergencyProtocols[emergencyFlag]!;
+    return TreatmentProtocol(
+      condition: emergencyFlag,
+      immediateActions: List<String>.from(protocol['immediate_actions'] ?? []),
+      medications: [],
+      whenToSeekCare: List<String>.from(protocol['signs_to_watch'] ?? []),
+      homeCare: [],
+      ageGroup: 'all',
+      isEmergency: true,
+      emergencyContact: protocol['emergency_contact'] ?? '911',
+    );
+  }
+
+  /// Get severity-based recommendations
+  Map<String, dynamic> _getSeverityBasedRecommendations(
+    double severityScore,
+    String ageGroup,
+    String? temperature,
+    String? duration,
+  ) {
+    final recommendations = <String, dynamic>{};
+
+    if (severityScore >= 8.0) {
+      recommendations['urgency'] = 'immediate';
+      recommendations['action'] = 'Seek emergency care immediately';
+      recommendations['monitoring'] = 'Continuous monitoring required';
+    } else if (severityScore >= 6.0) {
+      recommendations['urgency'] = 'urgent';
+      recommendations['action'] = 'Contact pediatrician within 24 hours';
+      recommendations['monitoring'] = 'Monitor every 2-4 hours';
+    } else if (severityScore >= 4.0) {
+      recommendations['urgency'] = 'moderate';
+      recommendations['action'] = 'Monitor closely, contact doctor if worsening';
+      recommendations['monitoring'] = 'Monitor every 4-6 hours';
+    } else {
+      recommendations['urgency'] = 'mild';
+      recommendations['action'] = 'Continue home care, contact doctor if no improvement in 48 hours';
+      recommendations['monitoring'] = 'Monitor daily';
+    }
+
+    // Add temperature-specific recommendations
+    if (temperature != null) {
+      final temp = double.tryParse(temperature) ?? 0;
+      if (temp >= 104) {
+        recommendations['temperature_action'] = 'Seek immediate medical attention';
+      } else if (temp >= 102) {
+        recommendations['temperature_action'] = 'Contact pediatrician today';
+      } else if (temp >= 100.4) {
+        recommendations['temperature_action'] = 'Monitor and treat with medication as needed';
+      }
+    }
+
+    // Add duration-specific recommendations
+    if (duration != null) {
+      if (duration.contains('week')) {
+        recommendations['duration_action'] = 'Contact pediatrician for persistent symptoms';
+      } else if (duration.contains('day') && !duration.contains('today')) {
+        recommendations['duration_action'] = 'Monitor for improvement';
+      }
+    }
+
+    return recommendations;
+  }
+
+  /// Map symptom to condition for treatment lookup
+  String? _mapSymptomToCondition(String symptom) {
+    final mapping = {
+      'fever': 'fever',
+      'temp': 'fever',
+      'temperature': 'fever',
+      'cough': 'cough',
+      'coughing': 'cough',
+      'vomiting': 'vomiting',
+      'throw up': 'vomiting',
+      'diarrhea': 'diarrhea',
+      'loose stool': 'diarrhea',
+      'rash': 'rash',
+      'skin rash': 'rash',
+      'ear pain': 'ear_pain',
+      'ear ache': 'ear_pain',
+      'headache': 'headache',
+      'head ache': 'headache',
+    };
+
+    return mapping[symptom.toLowerCase()];
+  }
+
+  /// Determine age group for treatment guidelines
+  String _determineAgeGroup(String age) {
+    final ageNum = int.tryParse(age) ?? 0;
     
-    if (response.toLowerCase().contains('amoxicillin')) {
-      medications.add(Medication(
-        name: 'Amoxicillin',
-        dosing: _medicationDatabase['amoxicillin']!['dosing'],
-        duration: _medicationDatabase['amoxicillin']!['duration'],
-        indications: _medicationDatabase['amoxicillin']!['indications'],
-        isOTC: false,
-        prescriptionRequired: true,
-      ));
+    if (ageNum < 1) return 'infant';
+    if (ageNum < 3) return 'toddler';
+    return 'child';
+  }
+
+  /// Get dosage calculator for medications
+  Map<String, dynamic> calculateDosage(String medication, String childAge, double weight) {
+    final ageGroup = _determineAgeGroup(childAge);
+    final guidelines = _ageMedicationGuidelines[ageGroup]?[medication];
+    
+    if (guidelines == null) {
+      return {'error': 'No dosage guidelines available for this medication and age'};
+    }
+
+    // Calculate dosage based on weight
+    final dosageRange = guidelines['dosage'] as String;
+    final maxDaily = guidelines['max_daily'] as String;
+    
+    // Parse dosage range (e.g., "10-15 mg/kg")
+    final dosageMatch = RegExp(r'(\d+)-(\d+)\s*mg/kg').firstMatch(dosageRange);
+    if (dosageMatch != null) {
+      final minDose = double.parse(dosageMatch.group(1)!) * weight;
+      final maxDose = double.parse(dosageMatch.group(2)!) * weight;
+      
+      return {
+        'medication': medication,
+        'age_group': ageGroup,
+        'weight': weight,
+        'dosage_range': '${minDose.toStringAsFixed(1)}-${maxDose.toStringAsFixed(1)} mg',
+        'max_daily': maxDaily,
+        'safety_notes': guidelines['safety_notes'],
+        'forms': guidelines['forms'],
+      };
+    }
+
+    return {'error': 'Unable to calculate dosage'};
+  }
+
+  /// Get all available medications for an age group
+  List<String> getAvailableMedications(String ageGroup) {
+    return _ageMedicationGuidelines[ageGroup]?.keys.toList() ?? [];
+  }
+
+  /// Get all available conditions
+  List<String> getAvailableConditions() {
+    return _conditionTreatments.keys.toList();
+  }
+
+  /// Validate medication safety for age
+  bool isMedicationSafe(String medication, String childAge) {
+    final ageGroup = _determineAgeGroup(childAge);
+    final guidelines = _ageMedicationGuidelines[ageGroup]?[medication];
+    
+    if (guidelines == null) return false;
+    
+    final safetyNotes = guidelines['safety_notes'] as String?;
+    if (safetyNotes == null) return true;
+    
+    // Check for age restrictions in safety notes
+    if (safetyNotes.contains('under 3 months') && int.parse(childAge) < 3) {
+      return false;
+    }
+    if (safetyNotes.contains('under 6 months') && int.parse(childAge) < 6) {
+      return false;
     }
     
-    return medications;
-  }
-
-  List<String> _getHomeRemedies(String symptom) {
-    return _homeRemedies[symptom.toLowerCase()] ?? [
-      'Rest and hydration',
-      'Monitor symptoms',
-      'Comfort measures'
-    ];
-  }
-
-  List<String> _extractPrecautions(String response) {
-    // Extract precautions from AI response
-    final precautions = <String>[];
-    
-    if (response.toLowerCase().contains('aspirin')) {
-      precautions.add('Never use aspirin in children (Reye syndrome risk)');
-    }
-    
-    if (response.toLowerCase().contains('honey') && response.toLowerCase().contains('infant')) {
-      precautions.add('Never give honey to infants <1 year (botulism risk)');
-    }
-    
-    return precautions;
-  }
-
-  List<String> _getRedFlags(String symptom) {
-    return _redFlags[symptom.toLowerCase()] ?? [
-      'Severe symptoms',
-      'Symptoms lasting >1 week',
-      'Signs of dehydration',
-      'High fever or difficulty breathing'
-    ];
-  }
-
-  String _extractWhenToSeeDoctor(String response) {
-    // Extract when to see doctor from AI response
-    if (response.toLowerCase().contains('emergency') || response.toLowerCase().contains('911')) {
-      return 'Seek immediate medical care';
-    }
-    if (response.toLowerCase().contains('doctor') || response.toLowerCase().contains('physician')) {
-      return 'Consult your doctor within 24-48 hours';
-    }
-    return 'Monitor symptoms and consult doctor if they persist or worsen';
-  }
-
-  String _getDisclaimer() {
-    return 'Based on my knowledge as a simulated pediatrician, this is my suggested diagnosis and treatment. If you\'re not sure or symptoms persist, always reach out to your doctor or seek immediate medical care.';
-  }
-
-  // Rule-based fallback methods
-  String _getRuleBasedDiagnosis(String symptom) {
-    switch (symptom.toLowerCase()) {
-      case 'fever':
-        return 'Viral infection (most common)';
-      case 'cough':
-        return 'Upper respiratory infection';
-      case 'vomiting':
-        return 'Viral gastroenteritis';
-      case 'diarrhea':
-        return 'Viral gastroenteritis';
-      default:
-        return 'Symptom-based assessment';
-    }
-  }
-
-  List<Medication> _getRuleBasedOTCMedications(String symptom, int age) {
-    final medications = <Medication>[];
-    
-    switch (symptom.toLowerCase()) {
-      case 'fever':
-        medications.add(Medication(
-          name: 'Acetaminophen',
-          dosing: _medicationDatabase['acetaminophen']!['dosing'],
-          ageRestrictions: _medicationDatabase['acetaminophen']!['age_restrictions'],
-          precautions: _medicationDatabase['acetaminophen']!['precautions'],
-          isOTC: true,
-        ));
-        if (age >= 6) {
-          medications.add(Medication(
-            name: 'Ibuprofen',
-            dosing: _medicationDatabase['ibuprofen']!['dosing'],
-            ageRestrictions: _medicationDatabase['ibuprofen']!['age_restrictions'],
-            precautions: _medicationDatabase['ibuprofen']!['precautions'],
-            isOTC: true,
-          ));
-        }
-        break;
-      case 'cough':
-        if (age >= 4) {
-          medications.add(Medication(
-            name: 'Dextromethorphan',
-            dosing: _medicationDatabase['dextromethorphan']!['dosing'],
-            ageRestrictions: _medicationDatabase['dextromethorphan']!['age_restrictions'],
-            indications: _medicationDatabase['dextromethorphan']!['indications'],
-            isOTC: true,
-          ));
-        }
-        if (age >= 1) {
-          medications.add(Medication(
-            name: 'Honey',
-            dosing: _medicationDatabase['honey']!['dosing'],
-            ageRestrictions: _medicationDatabase['honey']!['age_restrictions'],
-            precautions: _medicationDatabase['honey']!['precautions'],
-            indications: _medicationDatabase['honey']!['indications'],
-            isOTC: true,
-          ));
-        }
-        break;
-    }
-    
-    return medications;
-  }
-
-  List<Medication> _getRuleBasedPrescriptionMedications(String symptom) {
-    final medications = <Medication>[];
-    
-    switch (symptom.toLowerCase()) {
-      case 'ear_pain':
-      case 'sore_throat':
-        medications.add(Medication(
-          name: 'Amoxicillin',
-          dosing: _medicationDatabase['amoxicillin']!['dosing'],
-          duration: _medicationDatabase['amoxicillin']!['duration'],
-          indications: _medicationDatabase['amoxicillin']!['indications'],
-          isOTC: false,
-          prescriptionRequired: true,
-        ));
-        break;
-    }
-    
-    return medications;
-  }
-
-  List<String> _getRuleBasedPrecautions(String symptom) {
-    switch (symptom.toLowerCase()) {
-      case 'fever':
-        return [
-          'Never use aspirin in children (Reye syndrome risk)',
-          'Alternate acetaminophen and ibuprofen if needed',
-          'Monitor for dehydration signs'
-        ];
-      case 'cough':
-        return [
-          'Avoid over-the-counter cough medicines in children <4 years',
-          'Never give honey to infants <1 year (botulism risk)',
-          'Monitor for breathing difficulty'
-        ];
-      default:
-        return [
-          'Monitor symptoms closely',
-          'Seek medical care if symptoms worsen'
-        ];
-    }
-  }
-
-  String _getRuleBasedWhenToSeeDoctor(String symptom) {
-    switch (symptom.toLowerCase()) {
-      case 'fever':
-        return 'Seek care if fever >3 days, >104°F, or with rash/stiff neck';
-      case 'breathing_difficulty':
-        return 'Seek immediate medical care for any breathing difficulty';
-      case 'vomiting':
-        return 'Seek care if >6 episodes/day, blood/bile in vomit, or dehydration';
-      case 'diarrhea':
-        return 'Seek care if bloody, >10 episodes/day, or dehydration';
-      default:
-        return 'Consult doctor if symptoms persist or worsen';
-    }
+    return true;
   }
 }
 
-// Data classes for treatment recommendations
+/// Data classes for treatment recommendations
 class TreatmentRecommendation {
-  final String diagnosis;
-  final List<Medication> otcMedications;
-  final List<Medication> prescriptionMedications;
-  final List<String> homeRemedies;
-  final List<String> precautions;
-  final List<String> redFlags;
-  final String whenToSeeDoctor;
-  final String disclaimer;
-  final String aiResponse;
+  final List<TreatmentProtocol> treatments;
+  final List<MedicationRecommendation> medications;
+  final List<String> homeCare;
+  final List<String> whenToSeekCare;
+  final Map<String, dynamic> severityRecommendations;
+  final String ageGroup;
+  final String childAge;
+  final String childGender;
+  final double severityScore;
+  final List<String> emergencyFlags;
+  final String? temperature;
+  final String? duration;
+  final DateTime timestamp;
 
   TreatmentRecommendation({
-    required this.diagnosis,
-    required this.otcMedications,
-    required this.prescriptionMedications,
-    required this.homeRemedies,
-    required this.precautions,
-    required this.redFlags,
-    required this.whenToSeeDoctor,
-    required this.disclaimer,
-    required this.aiResponse,
+    required this.treatments,
+    required this.medications,
+    required this.homeCare,
+    required this.whenToSeekCare,
+    required this.severityRecommendations,
+    required this.ageGroup,
+    required this.childAge,
+    required this.childGender,
+    required this.severityScore,
+    required this.emergencyFlags,
+    this.temperature,
+    this.duration,
+    required this.timestamp,
   });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'diagnosis': diagnosis,
-      'otcMedications': otcMedications.map((m) => m.toJson()).toList(),
-      'prescriptionMedications': prescriptionMedications.map((m) => m.toJson()).toList(),
-      'homeRemedies': homeRemedies,
-      'precautions': precautions,
-      'redFlags': redFlags,
-      'whenToSeeDoctor': whenToSeeDoctor,
-      'disclaimer': disclaimer,
-      'aiResponse': aiResponse,
-    };
-  }
 }
 
-class Medication {
-  final String name;
-  final String dosing;
-  final String? duration;
-  final String? indications;
-  final String? ageRestrictions;
-  final String? precautions;
-  final bool isOTC;
-  final bool prescriptionRequired;
+class TreatmentProtocol {
+  final String condition;
+  final List<String> immediateActions;
+  final List<String> medications;
+  final List<String> whenToSeekCare;
+  final List<String> homeCare;
+  final String ageGroup;
+  final bool isEmergency;
+  final String? emergencyContact;
 
-  Medication({
-    required this.name,
-    required this.dosing,
-    this.duration,
-    this.indications,
-    this.ageRestrictions,
-    this.precautions,
-    required this.isOTC,
-    this.prescriptionRequired = false,
+  TreatmentProtocol({
+    required this.condition,
+    required this.immediateActions,
+    required this.medications,
+    required this.whenToSeekCare,
+    required this.homeCare,
+    required this.ageGroup,
+    this.isEmergency = false,
+    this.emergencyContact,
   });
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'dosing': dosing,
-      'duration': duration,
-      'indications': indications,
-      'ageRestrictions': ageRestrictions,
-      'precautions': precautions,
-      'isOTC': isOTC,
-      'prescriptionRequired': prescriptionRequired,
-    };
-  }
+class MedicationRecommendation {
+  final String name;
+  final String dosage;
+  final String maxDaily;
+  final String safetyNotes;
+  final List<String> forms;
+  final String ageGroup;
+  final String childAge;
+
+  MedicationRecommendation({
+    required this.name,
+    required this.dosage,
+    required this.maxDaily,
+    required this.safetyNotes,
+    required this.forms,
+    required this.ageGroup,
+    required this.childAge,
+  });
 } 

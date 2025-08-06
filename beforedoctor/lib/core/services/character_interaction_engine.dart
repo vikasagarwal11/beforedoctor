@@ -82,15 +82,22 @@ class CharacterInteractionEngine {
   Future<void> setLanguage(String languageCode) async {
     _currentLanguage = languageCode;
     await _tts.setLanguage(languageCode);
+    print('🗣️ Character TTS language set to: $languageCode');
   }
 
-  // Speak with animation
-  Future<void> speakWithAnimation(String text, {EmotionalTone? tone}) async {
+  // Speak with animation - Updated to support multilingual
+  Future<void> speakWithAnimation(String text, {EmotionalTone? tone, String? detectedLanguage}) async {
     if (tone != null) {
       setEmotionalTone(tone);
     }
     
+    // Set language for TTS if detected language is provided
+    if (detectedLanguage != null && detectedLanguage != _currentLanguage) {
+      await setLanguage(detectedLanguage);
+    }
+    
     setState(CharacterState.speaking);
+    print('🗣️ Character speaking in $_currentLanguage: "${text.substring(0, text.length > 50 ? 50 : text.length)}..."');
     await _tts.speak(text);
   }
 
@@ -152,6 +159,9 @@ class CharacterInteractionEngine {
         return 'Please tell me about the symptoms.';
     }
   }
+
+  // Get current language
+  String get currentLanguage => _currentLanguage;
 
   // Private methods
   void _setState(CharacterState state) {
