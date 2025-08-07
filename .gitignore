@@ -76,8 +76,8 @@ coverage/
 # Specific large files
 python/nih_chest_xray_training/data/nih-chest-xrays.zip
 python/disease_database_training/models/treatment_recommender.pkl
+python/models/symptom_classifier.pkl
 beforedoctor/assets/models/
-python/models/
 
 # Backup files
 *_backup_*.dart
@@ -85,10 +85,17 @@ python/models/
 * - Copy*.dart
 * - Copy*.py
 
-# Large datasets
+# Large datasets (but allow training scripts)
 *.csv
 *.json
 !pubspec.yaml
 !package.json
 !analysis_options.yaml
-!*.md 
+!*.md
+!python/*.py
+!python/*.md
+!python/*.txt
+!python/*/README.md
+!python/*/requirements.txt
+!python/*/outputs/
+!python/*/processed/ 

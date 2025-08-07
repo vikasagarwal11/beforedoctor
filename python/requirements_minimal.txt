@@ -1,0 +1,19 @@
+# Minimal Training Requirements for BeforeDoctor AI Models
+# Core packages that are already installed or easily available
+
+# Core ML libraries (already installed)
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+joblib>=1.3.0
+
+# Deep Learning (PyTorch only)
+torch>=2.0.0
+
+# Data Processing (already installed)
+scipy>=1.10.0
+matplotlib>=3.7.0
+
+# Utilities (already installed)
+tqdm>=4.65.0
+requests>=2.31.0 
