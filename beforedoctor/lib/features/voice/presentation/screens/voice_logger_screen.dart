@@ -5,11 +5,17 @@ import '../../../../services/llm_service.dart';
 import '../../../../core/services/character_interaction_engine.dart';
 import '../../../../services/usage_logger_service.dart';
 import '../../../../services/sheet_uploader_example.dart';
-import '../../../../core/services/symptom_extraction_service.dart';
-import '../../../../core/services/multi_symptom_analyzer.dart';
-import '../../../../core/services/treatment_recommendation_service.dart';
-import '../../../../services/translation_service.dart';
-import '../../../../services/tts_service.dart';
+import '../../../../services/diseases_symptoms_service.dart';
+import '../../../../services/pubmed_dataset_service.dart';
+import '../../../../services/disease_prediction_service.dart';
+import '../../../../core/services/nih_chest_xray_service.dart';
+import '../../../../core/services/enhanced_nih_service.dart';
+import '../../../../services/vaccination_coverage_service.dart';
+import '../../../../services/ai_enhanced_voice_service.dart';
+import '../../../../services/ai_model_service.dart';
+import '../../../../core/services/ai_response_orchestrator.dart';
+import '../widgets/ai_results_widget.dart';
+import 'pubmed_dataset_screen.dart';
 
 class VoiceLoggerScreen extends StatefulWidget {
   const VoiceLoggerScreen({Key? key}) : super(key: key);
@@ -25,11 +31,10 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
   final LLMService _llmService = LLMService();
   final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
   final UsageLoggerService _usageLogger = UsageLoggerService();
-  final SymptomExtractionService _symptomExtractor = SymptomExtractionService();
-  final MultiSymptomAnalyzer _multiSymptomAnalyzer = MultiSymptomAnalyzer();
-  final TreatmentRecommendationService _treatmentService = TreatmentRecommendationService();
-  final TranslationService _translationService = TranslationService();
-  final TTSService _ttsService = TTSService();
+  final DiseasesSymptomsService _diseasesSymptomsService = DiseasesSymptomsService();
+  final PubMedDatasetService _pubmedService = PubMedDatasetService();
+  final DiseasePredictionService _diseasePredictionService = DiseasePredictionService();
+  final AIResponseOrchestrator _aiOrchestrator = AIResponseOrchestrator();
 
   String _recognizedText = '';
   String _aiResponse = '';
@@ -40,26 +45,121 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
   Map<String, dynamic> _modelPerformance = {};
   Map<String, dynamic> _modelRecommendation = {};
   Map<String, dynamic> _analytics = {};
+  
+  // Disease prediction variables
+  Map<String, dynamic> _diseasePrediction = {};
+  List<String> _similarDiseases = [];
+  Map<String, dynamic> _treatmentRecommendations = {};
+  bool _showDiseasePrediction = false;
+  
+  // AI Enhanced variables
+  Map<String, dynamic> _aiResults = {};
+  bool _showAIResults = false;
+  bool _aiModelsLoaded = false;
 
-  // Multi-symptom analysis results
-  MultiSymptomAnalysis? _multiSymptomAnalysis;
-  SymptomExtractionResult? _symptomExtractionResult;
-  TreatmentRecommendation? _treatmentRecommendation;
-
-  // Language support
-  String _currentLanguage = 'en';
-  String _detectedLanguage = 'en';
-
-  // Enhanced child metadata with better structure
+  // Enhanced child metadata with comprehensive vital information
   final Map<String, String> _childMetadata = {
     'child_name': 'Vihaan',
     'child_age': '4',
     'child_gender': 'male',
+    'child_weight_kg': '16.5', // Weight in kg for dosage calculations
+    'child_height_cm': '105', // Height in cm for growth tracking
+    'child_bmi': '14.9', // BMI for health assessment
+    'child_birth_date': '2020-03-15', // For precise age calculations
+    'child_blood_type': 'O+', // For emergency situations
+    'child_allergies': 'None', // Critical for medication safety
+    'child_medications': '', // Current medications
+    'child_medical_history': '', // Past conditions
+    'child_immunization_status': 'Up to date', // Vaccination status
+    'child_developmental_milestones': 'Normal', // Development tracking
+    'child_activity_level': 'Moderate', // For health recommendations
+    'child_dietary_restrictions': 'None', // For treatment considerations
+    'child_emergency_contact': 'Parent: 555-0123', // Emergency info
+    'child_pediatrician': 'Dr. Smith', // Primary care provider
+    'child_insurance': 'Family Plan', // Insurance information
     'symptom_duration': '2 days',
     'temperature': '',
     'associated_symptoms': '',
     'medications': '',
   };
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+    );
+  }
+
+  /// Get comprehensive AI response using orchestrator
+  Future<void> _getComprehensiveAIResponse(List<String> symptoms, String? question) async {
+    try {
+      setState(() {
+        _isProcessing = true;
+      });
+
+      final childContext = {
+        'child_age': int.tryParse(_childMetadata['child_age'] ?? '5'),
+        'has_chronic_condition': _childMetadata['child_medical_history']?.isNotEmpty == true,
+        'recent_illness': false, // Could be enhanced with recent logs
+        'immunization_status': _childMetadata['child_immunization_status'] == 'Up to date' ? 'complete' : 'incomplete',
+      };
+
+      final response = await _aiOrchestrator.getComprehensiveResponse(
+        symptoms: symptoms,
+        childContext: childContext,
+        userQuestion: question,
+      );
+
+      setState(() {
+        _aiResponse = response['response'] ?? 'No response available';
+        _isProcessing = false;
+      });
+
+    } catch (e) {
+      setState(() {
+        _aiResponse = 'Error: $e';
+        _isProcessing = false;
+      });
+    }
+  }
+
+  Widget _buildDiseaseInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.green[700],
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -73,10 +173,11 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
     await _characterEngine.initialize();
     await _llmService.initialize();
     await _usageLogger.init();
-    await _ttsService.initTTS();
+    await _pubmedService.initialize();
+    await _diseasesSymptomsService.initialize();
     
-    // Initialize translation service and preload common languages
-    await _translationService.preloadCommonLanguages();
+    // Initialize AI models
+    _aiModelsLoaded = await AIModelService.loadModels();
     
     _updateModelPerformance();
     _updateAnalytics();
@@ -103,9 +204,6 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       _isListening = true;
       _recognizedText = '';
       _aiResponse = '';
-      _multiSymptomAnalysis = null;
-      _symptomExtractionResult = null;
-      _treatmentRecommendation = null;
     });
 
     _stt.startListening(
@@ -113,94 +211,23 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
         setState(() {
           _recognizedText = text;
           _symptomController.text = text;
-          _detectedLanguage = detectedLanguage; // Store detected language from STT
         });
-        print('🌍 Voice input detected language: $detectedLanguage for: "$text"');
       },
       onError: (error) {
         setState(() {
           _isListening = false;
         });
-        
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('❌ Voice recognition error: $error'),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        _showUserFeedback('Voice recognition error: $error', isError: true);
       },
     );
   }
 
-  void _stopListening() async {
-    await _stt.stopListening();
+  void _stopListening() {
+    _stt.stopListening();
     setState(() => _isListening = false);
   }
 
-  // Enhanced method: Start listening with auto-detection and streamlined processing
-  Future<void> _startListeningWithAutoDetection() async {
-    if (_isListening) return;
-
-    setState(() {
-      _isListening = true;
-      _recognizedText = '';
-      _aiResponse = '';
-      _multiSymptomAnalysis = null;
-      _symptomExtractionResult = null;
-      _treatmentRecommendation = null;
-    });
-
-    try {
-      // Use the new streamlined method
-      final result = await _stt.listenAndDetectLanguage();
-      
-      setState(() {
-        _recognizedText = result['transcript'];
-        _symptomController.text = result['transcript'];
-        _detectedLanguage = result['language'];
-        _isListening = false;
-      });
-      
-      print('🌍 Voice input detected language: ${result['language']} for: "${result['transcript']}"');
-      
-      // Auto-process the symptom if we have a transcript
-      if (result['transcript'].isNotEmpty) {
-        await _processSymptom(result['transcript']);
-      }
-      
-    } catch (e) {
-      setState(() {
-        _isListening = false;
-      });
-      
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('❌ Voice recognition error: $e'),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    }
-  }
-
-  // Enhanced symptom processing with treatment recommendations
+  // Enhanced symptom processing with better error handling
   Future<void> _processSymptom(String symptom) async {
     if (symptom.trim().isEmpty) {
       _showUserFeedback('Please enter a symptom', isError: true);
@@ -210,84 +237,24 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
     setState(() {
       _isProcessing = true;
       _aiResponse = '';
-      _multiSymptomAnalysis = null;
-      _symptomExtractionResult = null;
-      _treatmentRecommendation = null;
     });
 
     try {
       // Start character thinking animation
       _characterEngine.startThinking();
 
-      // Step 0: Auto-detect symptom if not provided
-      String processedSymptom = symptom;
-      if (processedSymptom.isEmpty && _recognizedText.isNotEmpty) {
-        // Auto-detect symptom from transcript using AI Prompt Service
-        final supportedSymptoms = _promptService.getSupportedSymptoms();
-        processedSymptom = supportedSymptoms.firstWhere(
-          (s) => _recognizedText.toLowerCase().contains(s.toLowerCase()),
-          orElse: () => 'general',
-        );
-        print('🔍 Auto-detected symptom: $processedSymptom from transcript: "$_recognizedText"');
-      }
-      
-      // Step 0.5: Process language and translate if needed (language already detected by STT)
-      if (_detectedLanguage != 'en') {
-        // Translate user input to English for AI processing
-        processedSymptom = await _translationService.translateUserInput(
-          userInput: processedSymptom,
-          userLanguage: _detectedLanguage,
-        );
-        print('🌍 Translated user input: "$symptom" → "$processedSymptom" (detected: $_detectedLanguage)');
-      }
-
-      // Step 1: Extract symptoms from voice input
-      final extractionResult = await _symptomExtractor.extractSymptoms(processedSymptom);
-      setState(() {
-        _symptomExtractionResult = extractionResult;
-      });
-
-      if (!extractionResult.hasSymptoms) {
+      // Build prompt using AIPromptService
+      final prompt = await _promptService.buildEnhancedLLMPrompt(symptom, _childMetadata);
+      if (prompt.isEmpty) {
         setState(() {
-          _aiResponse = 'No symptoms detected. Please try describing the symptoms more clearly.';
+          _aiResponse = 'No template found for "$symptom".';
           _isProcessing = false;
         });
-        _showUserFeedback('No symptoms detected', isError: true);
+        _showUserFeedback('No template found for this symptom', isError: true);
         return;
       }
 
-      // Step 2: Perform multi-symptom analysis
-      final analysis = await _multiSymptomAnalyzer.analyzeSymptoms(
-        symptoms: extractionResult.symptoms,
-        childAge: _childMetadata['child_age']!,
-        childGender: _childMetadata['child_gender']!,
-        temperature: extractionResult.context?['temperature'],
-        duration: _childMetadata['symptom_duration'],
-      );
-
-      setState(() {
-        _multiSymptomAnalysis = analysis;
-      });
-
-      // Step 3: Generate treatment recommendations
-      final treatmentRecommendation = await _treatmentService.generateRecommendations(
-        symptoms: extractionResult.symptoms,
-        childAge: _childMetadata['child_age']!,
-        childGender: _childMetadata['child_gender']!,
-        severityScore: analysis.severityScore,
-        emergencyFlags: analysis.emergencyFlags,
-        temperature: extractionResult.context?['temperature'],
-        duration: _childMetadata['symptom_duration'],
-      );
-
-      setState(() {
-        _treatmentRecommendation = treatmentRecommendation;
-      });
-
-      // Step 4: Build comprehensive prompt using AIPromptService
-      final prompt = _buildComprehensivePrompt(processedSymptom, extractionResult, analysis, treatmentRecommendation);
-      
-      // Step 5: Call AI service with dynamic model selection
+      // Call AI service with dynamic model selection
       String llmResponse;
       String modelUsed;
       int latencyMs = 0;
@@ -297,10 +264,8 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       
       switch (_selectedModel) {
         case 'auto':
-          final result = await _llmService.getAIResponse(prompt);
-          llmResponse = result['response'];
-          modelUsed = result['model_used'];
-          latencyMs = result['latency_ms'];
+          llmResponse = await _llmService.getAIResponseSimple(prompt);
+          modelUsed = 'auto_selected';
           break;
         case 'openai':
           llmResponse = await _llmService.callOpenAI(prompt);
@@ -317,39 +282,187 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
           break;
       }
 
-      if (latencyMs == 0) {
-        latencyMs = DateTime.now().difference(startTime).inMilliseconds;
-      }
+      latencyMs = DateTime.now().difference(startTime).inMilliseconds;
       
       // Calculate a simple score based on response quality
       score = _calculateResponseScore(llmResponse, latencyMs);
 
-      // Step 6: Translate AI response to user's language if needed
-      String finalResponse = llmResponse;
-      if (_detectedLanguage != 'en') {
-        finalResponse = await _translationService.translateAIResponse(
-          aiResponse: llmResponse,
-          userLanguage: _detectedLanguage,
-        );
-        print('🌍 Translated AI response to $_detectedLanguage: "${llmResponse.substring(0, llmResponse.length > 50 ? 50 : llmResponse.length)}..." → "${finalResponse.substring(0, finalResponse.length > 50 ? 50 : finalResponse.length)}..."');
-      }
-
+      // Get PubMed treatment recommendations
+      final pubmedRecommendations = _pubmedService.getTreatmentRecommendations(symptom, _childMetadata);
+      
+      // Get Diseases_Symptoms analysis
+      final diseasesAnalysis = await _diseasesSymptomsService.analyzeSymptoms(symptom);
+      
       // React to symptom and speak the result
       _characterEngine.reactToSymptom(symptom);
-      await _characterEngine.speakWithAnimation(finalResponse, detectedLanguage: _detectedLanguage);
+      await _characterEngine.speakWithAnimation(llmResponse);
       
-      // Additional direct TTS call with language mapping
-      final ttsLanguageCode = _ttsService.mapToTTSLanguage(_detectedLanguage);
-      await _ttsService.speak(finalResponse, languageCode: ttsLanguageCode);
+      // Add PubMed insights to response if available
+      if (pubmedRecommendations['studies_found'] > 0) {
+        final pubmedInsights = '\n\n🔬 PubMed Research Insights:\n'
+            '• Found ${pubmedRecommendations['studies_found']} relevant studies\n'
+            '• Evidence Level: ${pubmedRecommendations['evidence_level']}\n'
+            '• Common Treatments: ${(pubmedRecommendations['treatments'] as List).take(3).join(', ')}\n'
+            '• Age Considerations: ${(pubmedRecommendations['age_considerations'] as List).take(2).join(', ')}';
+        
+        llmResponse += pubmedInsights;
+      }
+      
+      // Add Diseases_Symptoms insights
+      if (diseasesAnalysis['symptoms'].isNotEmpty) {
+        final diseasesInsights = '\n\n🏥 AI Disease Analysis:\n'
+            '• Detected Symptoms: ${(diseasesAnalysis['symptoms'] as List).join(', ')}\n'
+            '• Urgency Level: ${diseasesAnalysis['urgency_level'].toString().toUpperCase()}\n';
+        
+        if (diseasesAnalysis['emergency_symptoms'].isNotEmpty) {
+          diseasesInsights += '• ⚠️ EMERGENCY SYMPTOMS: ${(diseasesAnalysis['emergency_symptoms'] as List).join(', ')}\n';
+        }
+        
+        if (diseasesAnalysis['recommendations']['treatment'] != null) {
+          final treatment = diseasesAnalysis['recommendations']['treatment'];
+          diseasesInsights += '• Recommended Treatment: ${treatment['treatment']}\n';
+        }
+        
+        llmResponse += diseasesInsights;
+      }
+
+      // Add Disease Database prediction
+      try {
+        final diseasePrediction = await _diseasePredictionService.predictDisease(symptom);
+        final similarDiseases = await _diseasePredictionService.getSimilarDiseases(symptom);
+        final treatmentRecommendations = await _diseasePredictionService.getTreatmentRecommendations(
+          diseasePrediction['disease'] ?? 'Unknown'
+        );
+        
+        // Process with AI enhancement
+        if (_aiModelsLoaded) {
+          final aiResults = await AIEnhancedVoiceService.processVoiceWithAI(symptom);
+          setState(() {
+            _aiResults = aiResults;
+            _showAIResults = true;
+          });
+        }
+        
+        setState(() {
+          _diseasePrediction = diseasePrediction;
+          _similarDiseases = similarDiseases;
+          _treatmentRecommendations = treatmentRecommendations;
+          _showDiseasePrediction = true;
+        });
+        
+        if (diseasePrediction['disease'] != null && diseasePrediction['disease'] != 'Predicted Disease') {
+          final diseaseInsights = '\n\n🏥 Disease Database Analysis:\n'
+              '• Predicted Disease: ${diseasePrediction['disease']}\n'
+              '• Confidence: ${(diseasePrediction['confidence'] * 100).toStringAsFixed(1)}%\n'
+              '• Similar Conditions: ${similarDiseases.take(3).join(', ')}\n';
+          
+          if (treatmentRecommendations['treatments'] != null) {
+            diseaseInsights += '• Recommended Treatments: ${(treatmentRecommendations['treatments'] as List).take(3).join(', ')}\n';
+          }
+          
+          llmResponse += diseaseInsights;
+        }
+      } catch (e) {
+        // Disease prediction failed, continue without it
+        print('Disease prediction error: $e');
+      }
+
+      // Add Enhanced NIH Chest X-ray respiratory analysis
+      try {
+        final childAge = int.tryParse(_childMetadata['child_age'] ?? '4') ?? 4;
+        final childGender = _childMetadata['child_gender'] ?? 'M';
+        
+        if (EnhancedNIHService.hasRespiratorySymptoms(symptom)) {
+          final enhancedAnalysis = EnhancedNIHService.analyzeRespiratorySymptoms(symptom, childAge, childGender: childGender);
+          
+          if (enhancedAnalysis['error'] == null) {
+            final enhancedInsights = '\n\n🫁 Enhanced NIH Respiratory Analysis:\n'
+                '• Detected Conditions: ${(enhancedAnalysis['symptoms'] as List).join(', ')}\n'
+                '• Severity Level: ${enhancedAnalysis['severity'].toString().toUpperCase()}\n'
+                '• Urgency Level: ${enhancedAnalysis['urgency'].toString().toUpperCase()}\n'
+                '• Dataset Accuracy: ${(enhancedAnalysis['dataset_accuracy'] * 100).toStringAsFixed(0)}%\n'
+                '• Documentation Based: ${enhancedAnalysis['documentation_based'] ? 'Yes' : 'No'}\n';
+            
+            if (enhancedAnalysis['recommendations'] != null) {
+              final recommendations = enhancedAnalysis['recommendations'] as List;
+              enhancedInsights += '• Enhanced Recommendations: ${recommendations.take(3).join(', ')}\n';
+            }
+            
+            llmResponse += enhancedInsights;
+          }
+        }
+      } catch (e) {
+        // Enhanced NIH analysis failed, continue without it
+        print('Enhanced NIH Chest X-ray analysis error: $e');
+      }
+
+      // Add Vaccination Coverage Analysis
+      try {
+        final vaccinationAnalysis = VaccinationCoverageService.extractVaccinationFromVoice(symptom);
+        
+        if (vaccinationAnalysis['is_vaccination'] == true) {
+          final childAge = int.tryParse(_childMetadata['child_age'] ?? '4') ?? 4;
+          final childId = _childMetadata['child_name'] ?? 'Unknown';
+          
+          // Check if CDC Enhanced tracking is enabled
+          final isEnhancedTracking = _childMetadata['child_immunization_status'] == 'CDC Enhanced';
+          
+          // Mock vaccination history - in real app, this would come from database
+          final vaccinationHistory = <String, List<Map<String, dynamic>>>{};
+          
+          final vaccinationStatus = VaccinationCoverageService.checkVaccinationStatus(
+            childId: childId,
+            ageInMonths: childAge * 12, // Convert years to months
+            vaccinationHistory: vaccinationHistory,
+          );
+          
+          if (vaccinationStatus['status'] == 'success') {
+            final vaccinationInsights = '\n\n💉 Vaccination Analysis:\n'
+                '• Detected Vaccine: ${vaccinationAnalysis['detected_vaccine']}\n'
+                '• Coverage Status: ${vaccinationStatus['coverage_percentage'].toStringAsFixed(1)}% complete\n'
+                '• Missing Vaccines: ${vaccinationStatus['missing_vaccines'].length}\n'
+                '• Completed Vaccines: ${vaccinationStatus['completed_vaccines'].length}\n';
+            
+            if (isEnhancedTracking) {
+              vaccinationInsights += '• 🎯 CDC Enhanced Tracking: Active\n';
+            } else {
+              vaccinationInsights += '• ℹ️ Basic tracking: Enable "CDC Enhanced" for detailed vaccine tracking\n';
+            }
+            
+            if (vaccinationStatus['recommendations'].isNotEmpty) {
+              vaccinationInsights += '• Recommendations: ${(vaccinationStatus['recommendations'] as List).take(3).join(', ')}\n';
+            }
+            
+            llmResponse += vaccinationInsights;
+            
+            // Log vaccination event if detected
+            if (vaccinationAnalysis['detected_vaccine'] != null) {
+              final vaccinationRecord = VaccinationCoverageService.logVaccination(
+                childId: childId,
+                vaccineName: vaccinationAnalysis['detected_vaccine'],
+                vaccinationDate: DateTime.now(),
+                notes: 'Logged via voice command: $symptom',
+              );
+              
+              if (vaccinationRecord['status'] == 'success') {
+                print('Vaccination logged successfully: ${vaccinationRecord['record']}');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Vaccination analysis failed, continue without it
+        print('Vaccination analysis error: $e');
+      }
 
       // Log the interaction using UsageLoggerService
       await _usageLogger.logInteraction(
         symptom: symptom,
         promptUsed: prompt,
         modelUsed: modelUsed,
-        aiResponse: finalResponse,
+        aiResponse: llmResponse,
         latencyMs: latencyMs,
-        success: finalResponse.isNotEmpty,
+        success: llmResponse.isNotEmpty,
         score: score,
         interactionType: 'voice_log',
         childAge: _childMetadata['child_age'],
@@ -362,12 +475,12 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       _updateAnalytics();
 
       setState(() {
-        _aiResponse = finalResponse;
+        _aiResponse = llmResponse;
         _isProcessing = false;
       });
 
       // Show success message
-      _showUserFeedback('✅ Comprehensive analysis complete!', isError: false);
+      _showUserFeedback('✅ AI Response ready!', isError: false);
 
     } catch (e) {
       setState(() {
@@ -394,53 +507,6 @@ class _VoiceLoggerScreenState extends State<VoiceLoggerScreen> {
       // Show error message
       _showUserFeedback('❌ Failed to get AI response', isError: true);
     }
-  }
-
-  // Build comprehensive prompt including treatment recommendations
-  String _buildComprehensivePrompt(
-    String originalInput,
-    SymptomExtractionResult extractionResult,
-    MultiSymptomAnalysis analysis,
-    TreatmentRecommendation treatmentRecommendation,
-  ) {
-    final symptoms = extractionResult.symptoms.join(', ');
-    final conditions = analysis.potentialConditions.take(3).map((c) => c.condition).join(', ');
-    final severity = analysis.severityScore.toStringAsFixed(1);
-    final emergencyFlags = analysis.emergencyFlags.isNotEmpty ? 'EMERGENCY: ${analysis.emergencyFlags.join(', ')}' : 'None';
-    
-    // Add treatment information
-    final treatments = treatmentRecommendation.treatments.map((t) => t.condition).join(', ');
-    final medications = treatmentRecommendation.medications.map((m) => m.name).join(', ');
-    
-    return '''
-Child Information:
-- Age: ${_childMetadata['child_age']} years
-- Gender: ${_childMetadata['child_gender']}
-- Duration: ${_childMetadata['symptom_duration']}
-
-Voice Input: "$originalInput"
-
-Extracted Symptoms: $symptoms
-Potential Conditions: $conditions
-Severity Score: $severity/10
-Emergency Flags: $emergencyFlags
-
-Treatment Analysis:
-- Recommended Treatments: $treatments
-- Medications: $medications
-- Home Care: ${treatmentRecommendation.homeCare.take(3).join(', ')}
-- When to Seek Care: ${treatmentRecommendation.whenToSeekCare.take(3).join(', ')}
-
-Please provide:
-1. Immediate recommendations based on severity and treatments
-2. Medication guidance with safety considerations
-3. Home care instructions
-4. When to seek medical attention
-5. Warning signs to watch for
-6. Follow-up recommendations
-
-Focus on pediatric-specific guidance, age-appropriate recommendations, and evidence-based treatments.
-''';
   }
 
   // Enhanced user feedback system
@@ -511,7 +577,12 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
           children: [
             Icon(Icons.analytics, color: Theme.of(context).primaryColor),
             const SizedBox(width: 8),
-            const Text('📊 Usage Analytics'),
+            Flexible(
+              child: const Text(
+                '📊 Usage Analytics',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -571,16 +642,20 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          Expanded(child: Text(title, overflow: TextOverflow.ellipsis)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],
@@ -596,32 +671,38 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
           children: [
             Icon(Icons.settings, color: Theme.of(context).primaryColor),
             const SizedBox(width: 8),
-            const Text('🔧 Model Selection'),
+            Flexible(
+              child: const Text(
+                '🔧 Model Selection',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _selectedModel,
-              decoration: InputDecoration(
-                labelText: 'Select AI Model',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: _selectedModel,
+                decoration: InputDecoration(
+                  labelText: 'Select AI Model',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'auto', child: Text('🔄 Auto-Select', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'openai', child: Text('OpenAI GPT-4o', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'grok', child: Text('xAI Grok', overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 'fallback', child: Text('Local Fallback', overflow: TextOverflow.ellipsis)),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedModel = value;
+                    });
+                  }
+                },
               ),
-              items: const [
-                DropdownMenuItem(value: 'auto', child: Text('🔄 Auto-Select (Recommended)')),
-                DropdownMenuItem(value: 'openai', child: Text('OpenAI GPT-4o')),
-                DropdownMenuItem(value: 'grok', child: Text('xAI Grok')),
-                DropdownMenuItem(value: 'fallback', child: Text('Local Fallback')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedModel = value;
-                  });
-                }
-              },
-            ),
             const SizedBox(height: 16),
             if (_modelRecommendation.isNotEmpty) ...[
               Container(
@@ -638,9 +719,12 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                       children: [
                         Icon(Icons.lightbulb, color: Colors.green[600]),
                         const SizedBox(width: 8),
-                        Text(
-                          '💡 AI Recommendation:',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700]),
+                        Expanded(
+                          child: Text(
+                            '💡 AI Recommendation:',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[700]),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -652,7 +736,7 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                     Text(
                       'Confidence: ${_modelRecommendation['confidence'] ?? 'N/A'}',
                       style: TextStyle(fontSize: 14, color: Colors.green[600]),
-                    ),
+                    )
                   ],
                 ),
               ),
@@ -666,107 +750,343 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 
-  void _showLanguageSelectionDialog() {
+  void _showChildInformationDialog() {
+    final _nameController = TextEditingController(text: _childMetadata['child_name']);
+    final _ageController = TextEditingController(text: _childMetadata['child_age']);
+    final _weightController = TextEditingController(text: _childMetadata['child_weight_kg']);
+    final _heightController = TextEditingController(text: _childMetadata['child_height_cm']);
+    final _birthDateController = TextEditingController(text: _childMetadata['child_birth_date']);
+    final _bloodTypeController = TextEditingController(text: _childMetadata['child_blood_type']);
+    final _allergiesController = TextEditingController(text: _childMetadata['child_allergies']);
+    final _medicationsController = TextEditingController(text: _childMetadata['child_medications']);
+    final _medicalHistoryController = TextEditingController(text: _childMetadata['child_medical_history']);
+    final _emergencyContactController = TextEditingController(text: _childMetadata['child_emergency_contact']);
+    final _pediatricianController = TextEditingController(text: _childMetadata['child_pediatrician']);
+    
+    String _selectedGender = _childMetadata['child_gender'] ?? 'male';
+    String _selectedImmunizationStatus = _childMetadata['child_immunization_status'] ?? 'Up to date';
+    String _selectedDevelopmentalStatus = _childMetadata['child_developmental_milestones'] ?? 'Normal';
+    String _selectedActivityLevel = _childMetadata['child_activity_level'] ?? 'Moderate';
+    String _selectedDietaryRestrictions = _childMetadata['child_dietary_restrictions'] ?? 'None';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.language, color: Theme.of(context).primaryColor),
+            Icon(Icons.child_care, color: Theme.of(context).primaryColor),
             const SizedBox(width: 8),
-            const Text('🌍 Language Settings'),
+            Flexible(
+              child: const Text(
+                '👶 Child Health Profile',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Current language display
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue[200]!),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Basic Information
+              _buildSectionTitle('Basic Information'),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Child Name',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              child: Row(
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Icon(Icons.info, color: Colors.blue[600]),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Current Language:',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[700]),
-                        ),
-                        Text(
-                          _translationService.getLanguageDisplayName(_currentLanguage),
-                          style: TextStyle(fontSize: 16, color: Colors.blue[600]),
-                        ),
-                        if (_detectedLanguage != 'en' && _detectedLanguage != _currentLanguage)
-                          Text(
-                            'Detected: ${_translationService.getLanguageDisplayName(_detectedLanguage)}',
-                            style: TextStyle(fontSize: 12, color: Colors.orange[600]),
-                          ),
+                    child: TextField(
+                      controller: _ageController,
+                      decoration: InputDecoration(
+                        labelText: 'Age (years)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedGender,
+                      decoration: InputDecoration(
+                        labelText: 'Gender',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'male', child: Text('Male')),
+                        DropdownMenuItem(value: 'female', child: Text('Female')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
                       ],
+                      onChanged: (value) => _selectedGender = value ?? 'male',
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            // Language selection
-            DropdownButtonFormField<String>(
-              value: _currentLanguage,
-              decoration: InputDecoration(
-                labelText: 'Select Language',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _birthDateController,
+                decoration: InputDecoration(
+                  labelText: 'Birth Date (YYYY-MM-DD)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              items: _translationService.getSupportedLanguages().map((langCode) {
-                return DropdownMenuItem(
-                  value: langCode,
-                  child: Text('${_translationService.getLanguageDisplayName(langCode)} ($langCode)'),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _currentLanguage = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // Auto-detection info
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
+
+              const SizedBox(height: 20),
+              
+              // Vital Measurements
+              _buildSectionTitle('Vital Measurements'),
+              Row(
                 children: [
-                  Icon(Icons.auto_awesome, color: Colors.green[600], size: 20),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'Language auto-detection is enabled. The app will automatically detect and translate your voice input.',
-                      style: TextStyle(fontSize: 12, color: Colors.green[700]),
+                    child: TextField(
+                      controller: _weightController,
+                      decoration: InputDecoration(
+                        labelText: 'Weight (kg)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _heightController,
+                      decoration: InputDecoration(
+                        labelText: 'Height (cm)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bloodTypeController,
+                decoration: InputDecoration(
+                  labelText: 'Blood Type',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Medical Information
+              _buildSectionTitle('Medical Information'),
+              TextField(
+                controller: _allergiesController,
+                decoration: InputDecoration(
+                  labelText: 'Allergies',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'e.g., Penicillin, Peanuts, Latex',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _medicationsController,
+                decoration: InputDecoration(
+                  labelText: 'Current Medications',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'e.g., Albuterol inhaler, Daily vitamins',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _medicalHistoryController,
+                decoration: InputDecoration(
+                  labelText: 'Medical History',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'e.g., Asthma, Previous surgeries',
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedImmunizationStatus,
+                decoration: InputDecoration(
+                  labelText: 'Immunization Status',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  helperText: 'Enhanced with CDC vaccination tracking',
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Up to date', child: Text('✅ Up to date')),
+                  DropdownMenuItem(value: 'Partially vaccinated', child: Text('⚠️ Partially vaccinated')),
+                  DropdownMenuItem(value: 'Behind schedule', child: Text('🚨 Behind schedule')),
+                  DropdownMenuItem(value: 'Unknown', child: Text('❓ Unknown')),
+                  DropdownMenuItem(value: 'CDC Enhanced', child: Text('💉 CDC Enhanced Tracking')),
+                ],
+                onChanged: (value) => _selectedImmunizationStatus = value ?? 'Up to date',
+              ),
+              const SizedBox(height: 8),
+              // Add vaccination coverage info if CDC Enhanced is selected
+              if (_selectedImmunizationStatus == 'CDC Enhanced')
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.vaccines, color: Colors.blue.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'CDC Vaccination Coverage Active',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Voice commands will now detect and track specific vaccines:\n'
+                        '• "Log flu shot for Vihaan"\n'
+                        '• "Check vaccination status"\n'
+                        '• "What vaccines are missing?"',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedDevelopmentalStatus,
+                decoration: InputDecoration(
+                  labelText: 'Developmental Milestones',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Normal', child: Text('Normal')),
+                  DropdownMenuItem(value: 'Slightly delayed', child: Text('Slightly delayed')),
+                  DropdownMenuItem(value: 'Significantly delayed', child: Text('Significantly delayed')),
+                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                ],
+                onChanged: (value) => _selectedDevelopmentalStatus = value ?? 'Normal',
+              ),
+
+              const SizedBox(height: 20),
+
+              // Lifestyle Information
+              _buildSectionTitle('Lifestyle Information'),
+              DropdownButtonFormField<String>(
+                value: _selectedActivityLevel,
+                decoration: InputDecoration(
+                  labelText: 'Activity Level',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Low', child: Text('Low')),
+                  DropdownMenuItem(value: 'Moderate', child: Text('Moderate')),
+                  DropdownMenuItem(value: 'High', child: Text('High')),
+                  DropdownMenuItem(value: 'Very high', child: Text('Very high')),
+                ],
+                onChanged: (value) => _selectedActivityLevel = value ?? 'Moderate',
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedDietaryRestrictions,
+                decoration: InputDecoration(
+                  labelText: 'Dietary Restrictions',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'None', child: Text('None')),
+                  DropdownMenuItem(value: 'Vegetarian', child: Text('Vegetarian')),
+                  DropdownMenuItem(value: 'Vegan', child: Text('Vegan')),
+                  DropdownMenuItem(value: 'Gluten-free', child: Text('Gluten-free')),
+                  DropdownMenuItem(value: 'Dairy-free', child: Text('Dairy-free')),
+                  DropdownMenuItem(value: 'Other', child: Text('Other')),
+                ],
+                onChanged: (value) => _selectedDietaryRestrictions = value ?? 'None',
+              ),
+
+              const SizedBox(height: 20),
+
+              // Emergency Information
+              _buildSectionTitle('Emergency Information'),
+              TextField(
+                controller: _emergencyContactController,
+                decoration: InputDecoration(
+                  labelText: 'Emergency Contact',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'e.g., Parent: 555-0123',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _pediatricianController,
+                decoration: InputDecoration(
+                  labelText: 'Primary Pediatrician',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'e.g., Dr. Smith - Pediatrics',
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Calculate BMI if weight and height are provided
+              String bmi = '';
+              if (_weightController.text.isNotEmpty && _heightController.text.isNotEmpty) {
+                try {
+                  double weight = double.parse(_weightController.text);
+                  double height = double.parse(_heightController.text) / 100; // Convert cm to meters
+                  double bmiValue = weight / (height * height);
+                  bmi = bmiValue.toStringAsFixed(1);
+                } catch (e) {
+                  bmi = '';
+                }
+              }
+
+              setState(() {
+                _childMetadata['child_name'] = _nameController.text;
+                _childMetadata['child_age'] = _ageController.text;
+                _childMetadata['child_gender'] = _selectedGender;
+                _childMetadata['child_weight_kg'] = _weightController.text;
+                _childMetadata['child_height_cm'] = _heightController.text;
+                _childMetadata['child_bmi'] = bmi;
+                _childMetadata['child_birth_date'] = _birthDateController.text;
+                _childMetadata['child_blood_type'] = _bloodTypeController.text;
+                _childMetadata['child_allergies'] = _allergiesController.text;
+                _childMetadata['child_medications'] = _medicationsController.text;
+                _childMetadata['child_medical_history'] = _medicalHistoryController.text;
+                _childMetadata['child_immunization_status'] = _selectedImmunizationStatus;
+                _childMetadata['child_developmental_milestones'] = _selectedDevelopmentalStatus;
+                _childMetadata['child_activity_level'] = _selectedActivityLevel;
+                _childMetadata['child_dietary_restrictions'] = _selectedDietaryRestrictions;
+                _childMetadata['child_emergency_contact'] = _emergencyContactController.text;
+                _childMetadata['child_pediatrician'] = _pediatricianController.text;
+              });
+              Navigator.of(context).pop();
+              _showUserFeedback('✅ Child information updated!', isError: false);
+            },
             child: const Text('Save'),
           ),
         ],
@@ -780,7 +1100,8 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
     _stt.dispose();
     _characterEngine.dispose();
     _usageLogger.close();
-    _translationService.dispose();
+    _pubmedService.dispose();
+    _diseasesSymptomsService.dispose();
     super.dispose();
   }
 
@@ -791,16 +1112,16 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
         title: Row(
           children: [
             Icon(Icons.mic, color: Colors.white),
-            SizedBox(width: 8),
-            Text("BeforeDoctor: Voice Assistant"),
+            const SizedBox(width: 8),
+            Flexible(
+              child: const Text(
+                "BeforeDoctor: Voice Assistant",
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.language),
-            onPressed: _showLanguageSelectionDialog,
-            tooltip: 'Language Settings',
-          ),
           IconButton(
             icon: const Icon(Icons.analytics),
             onPressed: _showAnalyticsDialog,
@@ -821,6 +1142,19 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
             icon: const Icon(Icons.settings),
             onPressed: _showModelSelectionDialog,
             tooltip: 'Model Settings',
+          ),
+          IconButton(
+            icon: const Icon(Icons.child_care),
+            onPressed: _showChildInformationDialog,
+            tooltip: 'Child Information',
+          ),
+          IconButton(
+            icon: const Icon(Icons.science),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PubMedDatasetScreen()),
+            ),
+            tooltip: 'PubMed Dataset',
           ),
         ],
       ),
@@ -873,10 +1207,88 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                     ],
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: _showModelSelectionDialog,
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Change'),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: TextButton.icon(
+                    onPressed: _showModelSelectionDialog,
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Change', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Child Information Display
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.child_care, color: Colors.orange[600]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_childMetadata['child_name']} (${_childMetadata['child_age']} years, ${_childMetadata['child_gender']})',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          if (_childMetadata['child_weight_kg']?.isNotEmpty == true && 
+                              _childMetadata['child_height_cm']?.isNotEmpty == true) ...[
+                            Text(
+                              '${_childMetadata['child_weight_kg']} kg, ${_childMetadata['child_height_cm']} cm',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            ),
+                            if (_childMetadata['child_bmi']?.isNotEmpty == true) ...[
+                              Text(
+                                'BMI: ${_childMetadata['child_bmi']}',
+                                style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+                              ),
+                            ],
+                          ],
+                          if (_childMetadata['child_allergies']?.isNotEmpty == true && 
+                              _childMetadata['child_allergies'] != 'None') ...[
+                            Text(
+                              '⚠️ Allergies: ${_childMetadata['child_allergies']}',
+                              style: TextStyle(fontSize: 12, color: Colors.red[600]),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: TextButton.icon(
+                        onPressed: _showChildInformationDialog,
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1023,258 +1435,7 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
             ],
           ),
 
-          const SizedBox(height: 12),
-
-          // New Streamlined Voice Button
-          Container(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: Icon(_isListening ? Icons.stop : Icons.auto_awesome),
-              label: Text(_isListening ? 'Stop Auto-Detect' : '🚀 Auto-Detect & Analyze'),
-              onPressed: (_isProcessing || _isListening) ? null : () {
-                if (_isListening) {
-                  _stopListening();
-                } else {
-                  _startListeningWithAutoDetection();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isListening ? Colors.orange : Colors.purple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                elevation: 3,
-              ),
-            ),
-          ),
-
           const SizedBox(height: 20),
-
-          // Symptom Extraction Results
-          if (_symptomExtractionResult != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.medical_services, color: Colors.blue[600], size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '🔍 Symptom Analysis:',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              'Method: ${_symptomExtractionResult!.methodDescription}',
-                              style: TextStyle(fontSize: 12, color: Colors.blue[600]),
-                            ),
-                            Text(
-                              'Confidence: ${_symptomExtractionResult!.confidenceDescription}',
-                              style: TextStyle(fontSize: 12, color: Colors.blue[600]),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Detected Symptoms: ${_symptomExtractionResult!.symptoms.join(', ')}',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Multi-Symptom Analysis Results
-          if (_multiSymptomAnalysis != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.purple[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.purple[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.purple[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.analytics, color: Colors.purple[600], size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '📊 Multi-Symptom Analysis:',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              'Severity: ${_multiSymptomAnalysis!.severityScore.toStringAsFixed(1)}/10',
-                              style: TextStyle(fontSize: 12, color: Colors.purple[600]),
-                            ),
-                            Text(
-                              'Confidence: ${(_multiSymptomAnalysis!.confidence * 100).toStringAsFixed(1)}%',
-                              style: TextStyle(fontSize: 12, color: Colors.purple[600]),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_multiSymptomAnalysis!.potentialConditions.isNotEmpty) ...[
-                    Text(
-                      'Potential Conditions: ${_multiSymptomAnalysis!.potentialConditions.take(3).map((c) => c.condition.replaceAll('_', ' ')).join(', ')}',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  if (_multiSymptomAnalysis!.emergencyFlags.isNotEmpty) ...[
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning, color: Colors.red[600], size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '🚨 Emergency Flags: ${_multiSymptomAnalysis!.emergencyFlags.join(', ')}',
-                              style: TextStyle(fontSize: 12, color: Colors.red[700], fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Treatment Recommendations
-          if (_treatmentRecommendation != null) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.medication, color: Colors.orange[600], size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '💊 Treatment Recommendations:',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              'Age Group: ${_treatmentRecommendation!.ageGroup}',
-                              style: TextStyle(fontSize: 12, color: Colors.orange[600]),
-                            ),
-                            Text(
-                              'Severity: ${_treatmentRecommendation!.severityScore.toStringAsFixed(1)}/10',
-                              style: TextStyle(fontSize: 12, color: Colors.orange[600]),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_treatmentRecommendation!.medications.isNotEmpty) ...[
-                    Text(
-                      'Medications: ${_treatmentRecommendation!.medications.map((m) => m.name).join(', ')}',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  if (_treatmentRecommendation!.homeCare.isNotEmpty) ...[
-                    Text(
-                      'Home Care: ${_treatmentRecommendation!.homeCare.take(3).join(', ')}',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  if (_treatmentRecommendation!.whenToSeekCare.isNotEmpty) ...[
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.amber[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info, color: Colors.amber[600], size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'When to Seek Care: ${_treatmentRecommendation!.whenToSeekCare.take(2).join(', ')}',
-                              style: TextStyle(fontSize: 12, color: Colors.amber[700], fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
 
           // Voice Recognition Display
           if (_recognizedText.isNotEmpty) ...[
@@ -1299,48 +1460,9 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                         child: Icon(Icons.mic, color: Colors.green[600], size: 20),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'You said:',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            if (_stt.confidence > 0) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Confidence: ${(_stt.confidence * 100).toStringAsFixed(1)}%',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _stt.confidence > 0.8 
-                                        ? Colors.green[600] 
-                                        : _stt.confidence > 0.6 
-                                          ? Colors.orange[600] 
-                                          : Colors.red[600],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    _stt.confidence > 0.8 
-                                      ? Icons.check_circle 
-                                      : _stt.confidence > 0.6 
-                                        ? Icons.warning 
-                                        : Icons.error,
-                                    size: 16,
-                                    color: _stt.confidence > 0.8 
-                                      ? Colors.green[600] 
-                                      : _stt.confidence > 0.6 
-                                        ? Colors.orange[600] 
-                                        : Colors.red[600],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
+                      const Text(
+                        'You said:',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
                   ),
@@ -1349,29 +1471,6 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                     _recognizedText,
                     style: const TextStyle(fontSize: 16),
                   ),
-                  if (_stt.confidence < 0.8 && _recognizedText.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning, color: Colors.orange[600], size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Low confidence detected. Consider re-recording for better accuracy.',
-                              style: TextStyle(fontSize: 12, color: Colors.orange[700]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1420,15 +1519,19 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          _selectedModel.toUpperCase(),
-                          style: const TextStyle(fontSize: 10, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _selectedModel.toUpperCase(),
+                            style: const TextStyle(fontSize: 10, color: Colors.white),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -1443,6 +1546,92 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
             ),
           ],
 
+          // Disease Prediction Display
+          if (_showDiseasePrediction && _diseasePrediction.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.medical_services, color: Colors.green[600], size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '🏥 Disease Database Analysis:',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+          // AI Results Display
+          if (_showAIResults && _aiResults.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            AIResultsWidget(
+              aiResults: _aiResults,
+              onTreatmentTap: () {
+                // Handle treatment tap
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Treatment recommendations: ${_aiResults['ai_insights']['urgency'] ?? 'Consult healthcare provider'}')),
+                );
+              },
+              onRiskTap: () {
+                // Handle risk tap
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Risk level: ${_aiResults['risk_level']?.toString().toUpperCase() ?? 'MEDIUM'}')),
+                );
+              },
+            ),
+          ],
+                  const SizedBox(height: 12),
+                  if (_diseasePrediction['disease'] != null) ...[
+                    _buildDiseaseInfoRow('Predicted Disease', _diseasePrediction['disease']),
+                    if (_diseasePrediction['confidence'] != null)
+                      _buildDiseaseInfoRow('Confidence', '${(_diseasePrediction['confidence'] * 100).toStringAsFixed(1)}%'),
+                  ],
+                  if (_similarDiseases.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _buildDiseaseInfoRow('Similar Conditions', _similarDiseases.take(3).join(', ')),
+                  ],
+                  if (_treatmentRecommendations['treatments'] != null) ...[
+                    const SizedBox(height: 8),
+                    _buildDiseaseInfoRow('Recommended Treatments', 
+                      (_treatmentRecommendations['treatments'] as List).take(3).join(', ')),
+                  ],
+                  if (_treatmentRecommendations['medications'] != null) ...[
+                    const SizedBox(height: 8),
+                    _buildDiseaseInfoRow('Medications', 
+                      (_treatmentRecommendations['medications'] as List).take(2).join(', ')),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 20),
 
           // Clear Button
@@ -1452,9 +1641,10 @@ Focus on pediatric-specific guidance, age-appropriate recommendations, and evide
                 _aiResponse = '';
                 _recognizedText = '';
                 _symptomController.clear();
-                _multiSymptomAnalysis = null;
-                _symptomExtractionResult = null;
-                _treatmentRecommendation = null;
+                _diseasePrediction = {};
+                _similarDiseases = [];
+                _treatmentRecommendations = {};
+                _showDiseasePrediction = false;
               });
             },
             icon: const Icon(Icons.clear),

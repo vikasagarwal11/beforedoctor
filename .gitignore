@@ -62,4 +62,33 @@ coverage/
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Large model files and datasets (should not be pushed to GitHub)
+*.pkl
+*.zip
+*.parquet
+*.h5
+*.hdf5
+*.model
+*.bin
+
+# Specific large files
+python/nih_chest_xray_training/data/nih-chest-xrays.zip
+python/disease_database_training/models/treatment_recommender.pkl
+beforedoctor/assets/models/
+python/models/
+
+# Backup files
+*_backup_*.dart
+*_backup_*.py
+* - Copy*.dart
+* - Copy*.py
+
+# Large datasets
+*.csv
+*.json
+!pubspec.yaml
+!package.json
+!analysis_options.yaml
+!*.md 

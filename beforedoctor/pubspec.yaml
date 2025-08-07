@@ -42,7 +42,7 @@ dependencies:
   google_ml_kit: ^0.18.0  # Offline STT/translation
   google_mlkit_translation: ^0.11.1  # Offline translation
   google_mlkit_language_id: ^0.11.1  # Language detection
-  speech_to_text: ^6.3.0  # Real-time voice input
+  # speech_to_text: ^6.3.0  # Real-time voice input - TEMPORARILY DISABLED
   dart_openai: ^5.1.0  # OpenAI Realtime Audio (fallback)
   http: ^1.2.2  # xAI API, OpenWeather, ElevenLabs API calls
   
@@ -108,6 +108,8 @@ flutter:
     - assets/animations/
     - assets/images/
     - assets/icons/
+    - assets/data/
+    - assets/models/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

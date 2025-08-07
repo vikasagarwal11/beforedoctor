@@ -230,7 +230,7 @@ class LLMService {
 
   // Legacy method for backward compatibility
   Future<String> getLLMResponse(String prompt) async {
-    return await getAIResponse(prompt);
+    return await getAIResponseSimple(prompt);
   }
 
   // Get model performance summary

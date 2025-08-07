@@ -22,7 +22,7 @@ class _DoctorCharacterScreenState extends ConsumerState<DoctorCharacterScreen> {
   final LLMService _llmService = LLMService();
   final TTSService _ttsService = TTSService();
   final TranslationService _translationService = TranslationService();
-  final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine();
+  final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
 
   WebViewController? _webViewController;
   bool _isInitialized = false;

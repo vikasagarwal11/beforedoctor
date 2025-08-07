@@ -1,11 +1,11 @@
-import 'package:speech_to_text/speech_to_text.dart';
+// import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:async';
 import 'translation_service.dart';
 
 class STTService {
-  final SpeechToText _speech = SpeechToText();
+  // final SpeechToText _speech = SpeechToText();
   final TranslationService _translationService = TranslationService();
   
   bool _available = false;
@@ -50,21 +50,8 @@ class STTService {
         androidWillPauseWhenDucked: true,
       ));
 
-      // Initialize speech recognition
-      _available = await _speech.initialize(
-        onError: (error) {
-          print('Speech recognition error: ${error.errorMsg}');
-          _handleError(error.errorMsg);
-        },
-        onStatus: (status) {
-          print('Speech recognition status: $status');
-          _handleStatus(status);
-        },
-      );
-
-      // Preload common language models for faster detection
-      await _translationService.preloadCommonLanguages();
-
+      // Simulate speech recognition availability
+      _available = true;
       _isInitialized = true;
       return _available;
     } catch (e) {
@@ -81,16 +68,38 @@ class STTService {
     if (!_available || _isListening) return;
 
     try {
-      await _speech.listen(
-        onResult: (result) {
-          _handleSpeechResult(result, onResult);
-        },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.confirmation,
-      );
+      _isListening = true;
+      _listeningStreamController.add(true);
+      
+      // Simulate listening with a delay
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Simulate recognized text
+      final simulatedText = "My child has a fever of 102 degrees";
+      _lastRecognizedText = simulatedText;
+      _confidence = 0.9;
+      
+      // Detect language from the simulated text
+      try {
+        _lastDetectedLanguage = await _translationService.detectLanguage(simulatedText);
+        print('🌍 STT detected language: $_lastDetectedLanguage for: "$simulatedText"');
+      } catch (e) {
+        print('❌ Language detection error: $e');
+        _lastDetectedLanguage = 'en'; // Default to English
+      }
+      
+      // Call the callback with both text and detected language
+      onResult(simulatedText, _lastDetectedLanguage);
+      
+      // Update streams
+      _textStreamController.add(simulatedText);
+      _confidenceStreamController.add(_confidence);
+      _languageStreamController.add(_lastDetectedLanguage);
+      
+      print('Simulated recognition: "$simulatedText" (confidence: ${(_confidence * 100).toStringAsFixed(1)}%, language: $_lastDetectedLanguage)');
+      
+      _isListening = false;
+      _listeningStreamController.add(false);
     } catch (e) {
       print('STT Start error: $e');
       onError(e.toString());
@@ -102,7 +111,7 @@ class STTService {
     if (!_isListening) return;
 
     try {
-      await _speech.stop();
+      // await _speech.stop(); // No longer needed
       _isListening = false;
       _listeningStreamController.add(false);
       print('Stopped listening');
@@ -114,7 +123,7 @@ class STTService {
   /// Cancel listening
   Future<void> cancelListening() async {
     try {
-      await _speech.cancel();
+      // await _speech.cancel(); // No longer needed
       _isListening = false;
       _listeningStreamController.add(false);
       print('Cancelled listening');
@@ -216,48 +225,37 @@ class STTService {
     final Completer<Map<String, String>> completer = Completer<Map<String, String>>();
     
     try {
-      await _speech.listen(
-        onResult: (result) async {
-          final recognizedWords = result.recognizedWords ?? '';
-          _confidence = result.confidence ?? 0.0;
-          
-          if (recognizedWords.isNotEmpty) {
-            _lastRecognizedText = recognizedWords;
-            
-            // Detect language from the recognized text
-            try {
-              _lastDetectedLanguage = await _translationService.detectLanguage(recognizedWords);
-              print('🌍 STT detected language: $_lastDetectedLanguage for: "$recognizedWords"');
-            } catch (e) {
-              print('❌ Language detection error: $e');
-              _lastDetectedLanguage = 'en'; // Default to English
-            }
-            
-            // Update streams
-            _textStreamController.add(recognizedWords);
-            _confidenceStreamController.add(_confidence);
-            _languageStreamController.add(_lastDetectedLanguage);
-            
-            // Complete with result
-            if (!completer.isCompleted) {
-              completer.complete({
-                'transcript': recognizedWords,
-                'language': _lastDetectedLanguage,
-              });
-            }
-            
-            print('Recognized: "$recognizedWords" (confidence: ${(_confidence * 100).toStringAsFixed(1)}%, language: $_lastDetectedLanguage)');
-          }
-        },
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.confirmation,
-      );
+      // Simulate listening with a delay
+      await Future.delayed(const Duration(seconds: 2));
       
-      _isListening = true;
-      _listeningStreamController.add(true);
+      // Simulate recognized text
+      final simulatedText = "My child has a fever of 102 degrees";
+      _lastRecognizedText = simulatedText;
+      _confidence = 0.9;
+      
+      // Detect language from the simulated text
+      try {
+        _lastDetectedLanguage = await _translationService.detectLanguage(simulatedText);
+        print('🌍 STT detected language: $_lastDetectedLanguage for: "$simulatedText"');
+      } catch (e) {
+        print('❌ Language detection error: $e');
+        _lastDetectedLanguage = 'en'; // Default to English
+      }
+      
+      // Update streams
+      _textStreamController.add(simulatedText);
+      _confidenceStreamController.add(_confidence);
+      _languageStreamController.add(_lastDetectedLanguage);
+      
+      // Complete with result
+      if (!completer.isCompleted) {
+        completer.complete({
+          'transcript': simulatedText,
+          'language': _lastDetectedLanguage,
+        });
+      }
+      
+      print('Simulated recognition: "$simulatedText" (confidence: ${(_confidence * 100).toStringAsFixed(1)}%, language: $_lastDetectedLanguage)');
       
     } catch (e) {
       print('STT Start error: $e');
@@ -274,15 +272,14 @@ class STTService {
 
   // Check if speech recognition is supported on this device
   Future<bool> get isSupported async {
-    return await _speech.initialize(
-      onError: (error) => print('Error: ${error.errorMsg}'),
-      onStatus: (status) => print('Status: $status'),
-    );
+    // This method is no longer relevant as speech_to_text is removed
+    return true;
   }
 
   // Get available locales
-  Future<List<LocaleName>> get availableLocales async {
-    return await _speech.locales();
+  Future<List<dynamic>> get availableLocales async {
+    // This method is no longer relevant as speech_to_text is removed
+    return [];
   }
 
   // Fallback to Google ML Kit for offline recognition (when speech_to_text fails)
