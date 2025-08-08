@@ -1,11 +1,24 @@
-import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logger/logger.dart';
 
 class LoggingService {
   static final LoggingService _instance = LoggingService._internal();
   factory LoggingService() => _instance;
   LoggingService._internal();
+
+  // Initialize logger with structured output
+  final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 2,
+      errorMethodCount: 8,
+      lineLength: 120,
+      colors: true,
+      printEmojis: true,
+      printTime: true,
+    ),
+    level: Level.debug,
+  );
 
   // HIPAA-compliant logging (no PII)
   Future<void> logInteraction({
@@ -32,7 +45,7 @@ class LoggingService {
     };
 
     // Console logging for development
-    dev.log('AI_INTERACTION: ${logData.toString()}');
+    _logger.i('AI_INTERACTION: ${logData.toString()}');
 
     // File logging for analytics (HIPAA-compliant)
     await _writeToLogFile(logData);
@@ -113,7 +126,7 @@ class LoggingService {
       final logEntry = '${DateTime.now().toIso8601String()}: ${logData.toString()}\n';
       await logFile.writeAsString(logEntry, mode: FileMode.append);
     } catch (e) {
-      dev.log('Error writing to log file: $e');
+      _logger.e('Error writing to log file: $e');
     }
   }
 
@@ -206,7 +219,7 @@ class LoggingService {
         'model_performance': modelPerformance,
       };
     } catch (e) {
-      dev.log('Error generating analytics summary: $e');
+      _logger.e('Error generating analytics summary: $e');
       return {
         'total_interactions': 0,
         'success_rate': 0.0,
@@ -224,8 +237,95 @@ class LoggingService {
       if (await logFile.exists()) {
         await logFile.delete();
       }
+      _logger.i('Logs cleared successfully');
     } catch (e) {
-      dev.log('Error clearing logs: $e');
+      _logger.e('Error clearing logs: $e');
+    }
+  }
+
+  // Convenience methods for different log levels
+  void debug(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.d(message, error: error, stackTrace: stackTrace);
+  }
+
+  void info(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.i(message, error: error, stackTrace: stackTrace);
+  }
+
+  void warning(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.w(message, error: error, stackTrace: stackTrace);
+  }
+
+  void error(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.e(message, error: error, stackTrace: stackTrace);
+  }
+
+  void verbose(String message, [dynamic error, StackTrace? stackTrace]) {
+    _logger.v(message, error: error, stackTrace: stackTrace);
+  }
+
+  // Log API calls with timing
+  void logApiCall({
+    required String endpoint,
+    required String method,
+    required int responseTime,
+    required int statusCode,
+    String? error,
+  }) {
+    final logData = {
+      'endpoint': endpoint,
+      'method': method,
+      'response_time_ms': responseTime,
+      'status_code': statusCode,
+      'error': error,
+    };
+
+    if (error != null) {
+      _logger.e('API_CALL_FAILED: $logData');
+    } else {
+      _logger.i('API_CALL_SUCCESS: $logData');
+    }
+  }
+
+  // Log voice processing events
+  void logVoiceProcessing({
+    required String event,
+    required String model,
+    required double confidence,
+    String? error,
+  }) {
+    final logData = {
+      'event': event, // 'started', 'completed', 'failed'
+      'model': model,
+      'confidence': confidence,
+      'error': error,
+    };
+
+    if (error != null) {
+      _logger.e('VOICE_PROCESSING_ERROR: $logData');
+    } else {
+      _logger.i('VOICE_PROCESSING: $logData');
+    }
+  }
+
+  // Log character interaction events
+  void logCharacterInteraction({
+    required String action,
+    required String emotion,
+    required int duration,
+    String? error,
+  }) {
+    final logData = {
+      'action': action, // 'speaking', 'listening', 'thinking'
+      'emotion': emotion, // 'happy', 'concerned', 'neutral'
+      'duration_ms': duration,
+      'error': error,
+    };
+
+    if (error != null) {
+      _logger.e('CHARACTER_INTERACTION_ERROR: $logData');
+    } else {
+      _logger.i('CHARACTER_INTERACTION: $logData');
     }
   }
 } 

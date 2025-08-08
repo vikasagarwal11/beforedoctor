@@ -1,0 +1,185 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Health conditions among children under 18 years | Kaggle</title>
+  <meta charset="utf-8" />
+    <meta name="robots" content="index, follow" />
+  <meta name="description" content="Explore Open Data from the Centers for Disease Control" />
+    <meta name="keywords" content="health,socrata" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+  <meta name="theme-color" content="#008ABC" />
+  <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" type="text/javascript">
+    window["pageRequestStartTime"] = 1754536341308;
+    window["pageRequestEndTime"] = 1754536341450;
+    window["initialPageLoadStartTime"] = new Date().getTime();
+  </script>
+  <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" id="gsi-client" src="https://accounts.google.com/gsi/client" async defer></script>
+  <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==">window.KAGGLE_JUPYTERLAB_PATH = "/static/assets/jupyterlab-v4/jupyterlab-index-c801df84d102b07347cc.html";</script>
+  <link rel="preconnect" href="https://www.google-analytics.com" crossorigin="anonymous" /><link rel="preconnect" href="https://stats.g.doubleclick.net" /><link rel="preconnect" href="https://storage.googleapis.com" /><link rel="preconnect" href="https://apis.google.com" />
+    <link href="/static/images/favicon.ico" rel="shortcut icon" type="image/x-icon" id="dynamic-favicon" />
+  <link rel="manifest" href="/static/json/manifest.json" crossorigin="use-credentials">
+
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i&display=swap"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL@0..1&display=block"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i&display=swap"
+    rel="stylesheet" media="print" id="async-google-font-1" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL@0..1&display=block"
+    rel="stylesheet" media="print" id="async-google-font-2" />
+  <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" type="text/javascript">
+    const styleSheetIds = ["async-google-font-1", "async-google-font-2"];
+    styleSheetIds.forEach(function (id) {
+      document.getElementById(id).addEventListener("load", function() {
+        this.media = "all";
+      });
+    });
+  </script>
+
+
+    <link rel="canonical" href="https://www.kaggle.com/datasets/cdc/health-conditions-among-children-under-18-years" />
+    <link rel="stylesheet" type="text/css" href="/static/assets/app.css?v=2d4e7ec4eb689d926191" />
+
+  
+    
+ 
+      <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==">
+        try{(function(a,s,y,n,c,h,i,d,e){d=s.createElement("style");
+        d.appendChild(s.createTextNode(""));s.head.appendChild(d);d=d.sheet;
+        y=y.map(x => d.insertRule(x + "{ opacity: 0 !important }"));
+        h.start=1*new Date;h.end=i=function(){y.forEach(x => x<d.cssRules.length ? d.deleteRule(x) : {})};
+        (a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+        })(window,document,['.site-header-react__nav'],'dataLayer',2000,{'GTM-52LNT9S':true});}catch(ex){}
+    </script>
+    <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==">
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-T7QHS60L4Q', {
+            'optimize_id': 'GTM-52LNT9S',
+            'displayFeaturesTask': null,
+            'send_page_view': false,
+            'content_group1': 'Datasets'
+        });
+    </script>
+    <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" async src="https://www.googletagmanager.com/gtag/js?id=G-T7QHS60L4Q"></script>
+
+  
+    
+    <meta property="og:url" content="https://www.kaggle.com/datasets/cdc/health-conditions-among-children-under-18-years" />
+    <meta property="og:title" content="Health conditions among children under 18 years" />
+    <meta property="og:description" content="Explore Open Data from the Centers for Disease Control" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://storage.googleapis.com/kaggle-datasets-images/52148/104189/e3a560a04c1d7dbd0ab7e5f983f0b229/dataset-card.jpg?t=2018-09-20-16-52-13" />
+    <meta property="fb:app_id" content="2665027677054710" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@kaggledatasets" />
+        <meta name="twitter:creator" content="@CDCgov" />
+
+
+  <meta name="twitter:site" content="@Kaggle" /> 
+  
+    
+            <script nonce="jgdJJQkcE35wuY2msm/+vw==" type="application/ld+json">{"@context":"http://schema.org/","@type":"Dataset","name":"Health conditions among children under 18 years","description":"### Content  \n\nHealth, United States is an annual report on trends in health statistics, find more information at http://www.cdc.gov/nchs/hus.htm.  \n\n### Context  \n\nThis is a dataset hosted by the Centers for Disease Control and Prevention. The organization has an open data platform found [here](https://data.cdc.gov) and they update their information according the amount of data that is brought in. Explore CDC Data using Kaggle and all of the data sources available through the CDC [organization page](https://www.kaggle.com/cdc)!  \n\n* Update Frequency: This dataset is updated daily.\n\n### Acknowledgements\n\nThis dataset is maintained using Socrata's API and Kaggle's API. [Socrata](https://socrata.com/) has assisted countless organizations with hosting their open data and has been an integral part of the process of bringing more data to the public.  \n\n[Cover photo](https://unsplash.com/photos/3RnkZpDqsEI) by [Geert Pieters](https://unsplash.com/@shotsbywolf) on [Unsplash](https://unsplash.com/)  \n_Unsplash Images are distributed under a unique [Unsplash License](https://unsplash.com/license)._  \n\nThis dataset is distributed under NA","url":"https://www.kaggle.com/cdc/health-conditions-among-children-under-18-years","version":98,"keywords":["subject, health and fitness, health","admin, initiatives, socrata"],"license":{"@type":"CreativeWork","name":"Other (specified in description)","url":""},"identifier":["52148"],"includedInDataCatalog":{"@type":"DataCatalog","name":"Kaggle","url":"https://www.kaggle.com"},"creator":{"@type":"Organization","name":"Centers for Disease Control and Prevention","url":"https://www.kaggle.com/organizations/cdc","image":"https://storage.googleapis.com/kaggle-organizations/223/thumbnail.PNG%3Fr=568"},"distribution":[{"@type":"DataDownload","requiresSubscription":true,"encodingFormat":"zip","fileFormat":"zip","contentUrl":"https://www.kaggle.com/datasets/cdc/health-conditions-among-children-under-18-years/download?datasetVersionNumber=98","contentSize":"12046 bytes"}],"commentCount":0,"dateModified":"2019-05-22T01:44:17.473Z","discussionUrl":"https://www.kaggle.com/cdc/health-conditions-among-children-under-18-years/discussion","alternateName":"Explore Open Data from the Centers for Disease Control","isAccessibleForFree":true,"thumbnailUrl":"https://storage.googleapis.com/kaggle-datasets-images/52148/104189/e3a560a04c1d7dbd0ab7e5f983f0b229/dataset-card.jpg?t=2018-09-20-16-52-13","interactionStatistic":[{"@type":"InteractionCounter","interactionType":"http://schema.org/CommentAction","userInteractionCount":0},{"@type":"InteractionCounter","interactionType":"http://schema.org/DownloadAction","userInteractionCount":752},{"@type":"InteractionCounter","interactionType":"http://schema.org/ViewAction","userInteractionCount":12987},{"@type":"InteractionCounter","interactionType":"http://schema.org/LikeAction","userInteractionCount":13}]}</script>
+        
+
+  
+    
+
+  
+    
+
+
+    <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==">window['useKaggleAnalytics'] = true;</script>
+
+  <script id="gapi-target" nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" src="https://apis.google.com/js/api.js" defer
+    async></script>
+  <script nonce="jgdJJQkcE35wuY2msm/+vw==" src="/static/assets/runtime.js?v=65426da9000667ae2a28"></script>
+  <script nonce="jgdJJQkcE35wuY2msm/+vw==" src="/static/assets/vendor.js?v=6d226e4a372be1c4af4e"></script>
+  <script nonce="jgdJJQkcE35wuY2msm/+vw==" src="/static/assets/app.js?v=6c341c2febd42ac91985"></script>
+    <script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" type="text/javascript">
+      window.kaggleStackdriverConfig = {
+        key: 'AIzaSyA4eNqUdRRskJsCZWVz-qL655Xa5JEMreE',
+        projectId: 'kaggle-161607',
+        service: 'web-fe',
+        version: 'ci',
+        userId: '0'
+      }
+    </script>
+</head>
+<body>
+  <div id="root">
+    
+
+
+
+
+
+
+
+
+<script nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==" type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    jax: ['input/TeX', 'output/SVG'],
+    "HTML-CSS": {
+    preferredFont: "TeX",
+    availableFonts: ["STIX", "TeX"],
+    linebreaks: {
+    automatic: true
+    },
+    EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50)
+    },
+    tex2jax: {
+    inlineMath: [["\\(", "\\)"], ["\\\\(", "\\\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    ignoreClass: "tex2jax_ignore|dno"
+    },
+    TeX: {
+    noUndefined: {
+    attributes: {
+    mathcolor: "red",
+    mathbackground: "#FFEEEE",
+    mathsize: "90%"
+    }
+    }
+    },
+    Macros: {
+    href: "{}"
+    },
+    skipStartupTypeset: true,
+    messageStyle: "none",
+    extensions: ["Safe.js"],
+    });
+</script>
+<script type="text/javascript" nonce="jgdJJQkcE35wuY2msm/&#x2B;vw==">
+  window.addEventListener("DOMContentLoaded", () => {
+    const head = document.getElementsByTagName("head")[0];
+    const lib = document.createElement("script");
+    lib.type = "text/javascript";
+    // Always use the production asset in local dev, which is served from GCS. We tried to proxy and / or serve this
+    // in a better way in localhost, but it didn't work out. See b/328073416#comment8 for details.
+    const forceProdHost = window.location.hostname === "localhost";
+    lib.src = `${forceProdHost ? "https://www.kaggle.com" : ""}/static/mathjax/2.7.9/MathJax.js?config=TeX-AMS_SVG`;
+    head.appendChild(lib);
+  });
+</script>
+
+
+
+
+
+
+
+
+
+  </div>
+</body>
+</html>

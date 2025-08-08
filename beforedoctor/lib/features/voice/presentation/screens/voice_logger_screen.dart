@@ -13,7 +13,7 @@ import '../../../../core/services/enhanced_nih_service.dart';
 import '../../../../services/vaccination_coverage_service.dart';
 import '../../../../services/ai_enhanced_voice_service.dart';
 import '../../../../services/ai_model_service.dart';
-import '../../../../core/services/ai_response_orchestrator.dart';
+import '../../../../../core/services/ai_response_orchestrator.dart';
 import '../widgets/ai_results_widget.dart';
 import 'pubmed_dataset_screen.dart';
 
