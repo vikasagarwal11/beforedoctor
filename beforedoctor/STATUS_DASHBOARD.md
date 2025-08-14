@@ -1,5 +1,7 @@
 # 📊 **BeforeDoctor Status Dashboard**
 
+> **📖 For the complete project vision and 3D character architecture, see: [3D_CHARACTER_HEALTH_ASSISTANT_VISION.md](./3D_CHARACTER_HEALTH_ASSISTANT_VISION.md)**
+
 ## **🟢 REAL-TIME STATUS**
 
 ### **✅ HEALTHY FEATURES**

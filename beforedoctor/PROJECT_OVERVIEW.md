@@ -1,7 +1,11 @@
 # Project Overview: BeforeDoctor
 
 ## Overview
-BeforeDoctor is a voice-driven health app that helps caregivers (parents, grandparents) log children's symptoms via natural speech, generating structured reports to streamline clinic visits (saving 5-15 minutes per visit). It empowers users with interactive voice control (like Grok's mode), multilingual support (English, Spanish, Chinese, French, Hindi), AI extraction/prompts, and basic contextual insights (e.g., weather-based flags). The app is offline-first, HIPAA-compliant, and focused on caregiver collaboration.
+BeforeDoctor is evolving into a **comprehensive, interactive 3D character-based health assistant** that provides an engaging, AI-powered experience for pediatric symptom logging, diagnosis, and doctor preparation. The app helps caregivers (parents, grandparents, nannies) and children log symptoms through natural conversation with a 3D character, generating structured reports to streamline clinic visits (saving 5-15 minutes per visit).
+
+**📖 For the complete vision and architecture, see: [3D_CHARACTER_HEALTH_ASSISTANT_VISION.md](./3D_CHARACTER_HEALTH_ASSISTANT_VISION.md)**
+
+The app empowers users with interactive 3D character control, multilingual support (English, Spanish, Chinese, French, Hindi), AI extraction/prompts, and contextual insights (e.g., weather-based flags). It's offline-first, HIPAA-compliant, and focused on caregiver collaboration with progressive AI intelligence.
 
 ## Key Features (MVP)
 - **Voice Logging**: Capture symptoms via voice (e.g., "Aarav has 102 fever, threw up twice"), trigger functions (e.g., save log, prompt follow-up).
