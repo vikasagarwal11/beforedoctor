@@ -31,56 +31,45 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # UI and Icons
-  cupertino_icons: ^1.0.8
-  
-  # State Management (required by .cursorrules)
+  # UI & Animation
+  get: ^4.6.6
+  getwidget: ^6.0.0  # Fixed package name
+  rive: ^0.13.0  # Fixed version for compatibility
+  lottie: ^3.1.0
+
+  # State Management
   flutter_riverpod: ^2.5.1
   hooks_riverpod: ^2.5.1
-  
+
+  # Database & Storage
+  sqflite: ^2.3.3+1
+  firebase_core: ^3.15.2
+  firebase_database: ^11.3.10
+  firebase_auth: ^5.7.0
+
   # Voice & AI
-  google_ml_kit: ^0.18.0  # Offline STT/translation
-  google_mlkit_translation: ^0.11.1  # Offline translation
-  google_mlkit_language_id: ^0.11.1  # Language detection
-  # speech_to_text: ^6.3.0  # Real-time voice input - REMOVED due to compatibility issues
-  dart_openai: ^5.1.0  # OpenAI Realtime Audio (fallback)
-  http: ^1.2.2  # xAI API, OpenWeather, ElevenLabs API calls
-  
-  # Data Storage
-  sqflite: ^2.3.3  # Offline storage
-  firebase_core: ^3.3.0  # Firebase
-  firebase_auth: ^5.1.4  # Caregiver logins
-  firebase_database: ^11.0.0  # Sync
-  
-  # UI Components
-  flutter_animate: ^4.5.0  # Animations (FadeTransition)
-  lottie: ^3.1.2  # Micro-interactions
-  getwidget: ^6.0.0  # Modern UI components - Updated for Flutter 3.32.6 compatibility
-  
-  # Animated Character
-  rive: ^0.13.0  # Rive animations - UPGRADED for compatibility
-  flutter_tts: ^3.8.3  # Text-to-speech
-  
-  # AI Singing Response
-  audio_session: ^0.1.18  # Audio session management
-  just_audio: ^0.9.36  # Audio playback for singing
-  
-  # Features
-  geolocator: ^12.0.0  # Location for insights
-  intl: ^0.19.0  # Multilingual
-  qr_flutter: ^4.1.0  # QR export
-  flutter_dotenv: ^5.1.0  # API keys
-  path: ^1.9.0  # File path handling
-  
-  # Platform-specific
-  permission_handler: ^11.3.1  # iOS/Android permissions
-  
-  # 3D Character Integration
-  # webview_flutter: ^4.7.0  # WebView for 3D character rendering - COMMENTED OUT
-  # model_viewer_plus: ^1.7.0  # 3D GLTF model rendering - COMMENTED OUT
-  
-  # Logging
-  logger: ^2.0.2  # Structured logging with Firebase Analytics/Crashlytics integration
+  google_ml_kit: ^0.18.1
+  dart_openai: ^5.1.0
+  flutter_tts: ^3.8.5
+  just_audio: ^0.9.46
+  audio_session: ^0.1.25
+
+  # Utilities
+  logger: ^2.0.2+1
+  permission_handler: ^11.4.0
+  geolocator: ^12.0.0
+  http: ^1.4.0  # Reverted to original version
+  intl: ^0.19.0
+  qr_flutter: ^4.1.0
+  flutter_dotenv: ^5.1.0  # Added back for environment config
+  path: ^1.9.0  # Added back for file handling
+
+  # 3D Rendering - CUSTOM SOLUTION (NO WebView!)
+  # three_dart: ^0.0.8  # COMMENTED OUT - HTTP version conflict
+  # flutter_gl: ^0.0.2  # COMMENTED OUT - Android namespace issues
+  # model_viewer_plus: ^1.7.0  # COMMENTED OUT - causes WebView memory leaks
+  # webview_flutter: ^4.7.0  # COMMENTED OUT - no longer needed
+  # flutter_3d_controller: ^1.3.1  # COMMENTED OUT - has WebView dependency causing memory leaks
 
 dev_dependencies:
   flutter_test:
