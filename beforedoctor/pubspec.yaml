@@ -42,7 +42,7 @@ dependencies:
   google_ml_kit: ^0.18.0  # Offline STT/translation
   google_mlkit_translation: ^0.11.1  # Offline translation
   google_mlkit_language_id: ^0.11.1  # Language detection
-  # speech_to_text: ^6.3.0  # Real-time voice input - TEMPORARILY DISABLED
+  # speech_to_text: ^6.3.0  # Real-time voice input - REMOVED due to compatibility issues
   dart_openai: ^5.1.0  # OpenAI Realtime Audio (fallback)
   http: ^1.2.2  # xAI API, OpenWeather, ElevenLabs API calls
   
@@ -55,10 +55,10 @@ dependencies:
   # UI Components
   flutter_animate: ^4.5.0  # Animations (FadeTransition)
   lottie: ^3.1.2  # Micro-interactions
-  getwidget: ^4.0.0  # Modern UI components
+  getwidget: ^6.0.0  # Modern UI components - Updated for Flutter 3.32.6 compatibility
   
   # Animated Character
-  rive: ^0.12.4  # Rive animations
+  rive: ^0.13.0  # Rive animations - UPGRADED for compatibility
   flutter_tts: ^3.8.3  # Text-to-speech
   
   # AI Singing Response
@@ -77,6 +77,7 @@ dependencies:
   
   # 3D Character Integration
   webview_flutter: ^4.7.0  # WebView for 3D character rendering
+  model_viewer_plus: ^1.7.0  # 3D GLTF model rendering
   
   # Logging
   logger: ^2.0.2  # Structured logging with Firebase Analytics/Crashlytics integration
@@ -108,7 +109,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/animations/
+    - assets/characters/
+    - assets/3d/
     - assets/images/
     - assets/icons/
     - assets/data/

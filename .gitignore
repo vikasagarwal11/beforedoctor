@@ -32,6 +32,7 @@ out/
 .pub-cache/
 .pub/
 /build/
+**/build/
 
 # Symbolication related
 app.*.symbols
@@ -48,6 +49,8 @@ app.*.map.json
 .env
 .env.local
 .env.production
+*.env
+* - Copy.env
 
 # Firebase
 google-services.json
@@ -73,17 +76,22 @@ coverage/
 *.model
 *.bin
 
-# Specific large files
+# Specific large files and directories
 python/nih_chest_xray_training/data/nih-chest-xrays.zip
+python/nih_chest_xray_training/data/nih-chest-xrays/
 python/disease_database_training/models/treatment_recommender.pkl
 python/models/symptom_classifier.pkl
 beforedoctor/assets/models/
+beforedoctor/assets/3d/
+beforedoctor/assets/characters/
+beforedoctor/assets/_animations to be deleted/
 
 # Backup files
 *_backup_*.dart
 *_backup_*.py
 * - Copy*.dart
 * - Copy*.py
+backups/
 
 # Large datasets (but allow training scripts)
 *.csv
@@ -98,4 +106,35 @@ beforedoctor/assets/models/
 !python/*/README.md
 !python/*/requirements.txt
 !python/*/outputs/
-!python/*/processed/ 
+!python/*/processed/
+
+# Flutter specific build and cache
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# Platform-specific build files
+**/android/.gradle/
+**/android/app/build/
+**/ios/Pods/
+**/ios/Runner.xcworkspace/xcshareddata/
+**/macos/Pods/
+**/windows/runner/Release/
+**/linux/runner/Release/
+
+# Large asset files
+**/*.glb
+**/*.gltf
+**/*.usdz
+**/*.riv
+**/*.so
+**/*.dll
+**/*.dylib
+
+# Exclude duplicate data directories
+**/data - Copy/
+**/more samples/
+**/archived/
+**/duplicates/
+**/smaller_versions/ 

@@ -5,7 +5,7 @@ import 'core/config/app_config.dart';
 import 'theme/pediatric_theme.dart';
 import 'features/voice/presentation/screens/voice_logging_screen.dart';
 import 'features/voice/presentation/screens/voice_logger_screen.dart';
-import 'features/character/presentation/screens/doctor_character_screen.dart';
+import 'features/character/presentation/screens/enhanced_doctor_character_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -380,7 +380,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const DoctorCharacterScreen(),
+        builder: (context) => const EnhancedDoctorCharacterScreen(),
       ),
     );
   }

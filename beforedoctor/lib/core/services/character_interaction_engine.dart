@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+// REMOVE: import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/intl.dart';
+import 'lip_sync_service.dart';
+import 'rive_animation_manager.dart';
 
 enum CharacterState {
   idle,
@@ -28,12 +30,11 @@ class CharacterInteractionEngine {
 
   CharacterInteractionEngine._internal();
 
-  // TTS Controller
-  final FlutterTts _tts = FlutterTts();
+  // REMOVE: TTS Controller - LipSyncService will own this
+  // final FlutterTts _tts = FlutterTts();
   
-  // Rive Controller
-  RiveAnimationController? _characterController;
-  Artboard? _artboard;
+  // Rive Animation Manager reference
+  RiveAnimationManager? _animationManager;
   
   // Current state
   CharacterState _currentState = CharacterState.idle;
@@ -44,25 +45,54 @@ class CharacterInteractionEngine {
   Function(String)? onStateChanged;
   Function(double)? onSpeakingProgress;
   Function()? onSpeakingComplete;
+  
+  // ADD THIS: Emotional tone callback
+  Function(String)? _onEmotionalToneChanged;
+  
+  // ADD THIS: Reference to LipSyncService for TTS operations
+  static LipSyncService? _lipSyncService;
+  
+  // Setter methods for callbacks
+  void setOnStateChange(Function(String) callback) {
+    onStateChanged = callback;
+  }
+  
+  void setOnEmotionalToneChange(Function(String) callback) {
+    // STORE the callback instead of doing nothing
+    _onEmotionalToneChanged = callback;
+  }
+
+  // ADD THIS: Set LipSyncService reference
+  static void setLipSyncService(LipSyncService service) {
+    _lipSyncService = service;
+  }
+
+  // ADD THIS: Set Rive Animation Manager reference
+  void setAnimationManager(RiveAnimationManager manager) {
+    _animationManager = manager;
+  }
 
   // Initialize the engine
   Future<void> initialize() async {
-    await _tts.setLanguage(_currentLanguage);
-    await _tts.setSpeechRate(0.5); // Slower for clarity
-    await _tts.setVolume(1.0);
-    await _tts.setPitch(1.0);
+    // REMOVE: TTS setup - LipSyncService will handle this
+    // await _tts.setLanguage(_currentLanguage);
+    // await _tts.setSpeechRate(0.5); // Slower for clarity
+    // await _tts.setVolume(1.0);
+    // await _tts.setPitch(1.0);
     
-    // Set up TTS callbacks
-    _tts.setCompletionHandler(() {
-      _setState(CharacterState.idle);
-      onSpeakingComplete?.call();
-    });
+    // REMOVE: TTS callbacks - LipSyncService will handle these
+    // _tts.setCompletionHandler(() {
+    //   _setState(CharacterState.idle);
+    //   onSpeakingComplete?.call();
+    // });
     
-    _tts.setProgressHandler((text, start, end, word) {
-      final progress = end / text.length;
-      onSpeakingProgress?.call(progress);
-      _syncLipMovement(word);
-    });
+    // _tts.setProgressHandler((text, start, end, word) {
+    //   final progress = end / text.length;
+    //   onSpeakingProgress?.call(progress);
+    //   _syncLipMovement(word);
+    // });
+    
+    print('🎭 Character Interaction Engine initialized (TTS delegated to LipSyncService)');
   }
 
   // Set character state
@@ -72,20 +102,51 @@ class CharacterInteractionEngine {
     onStateChanged?.call(state.name);
   }
 
+  // Change character state (public method for external use)
+  Future<void> changeState(String stateName) async {
+    try {
+      final state = CharacterState.values.firstWhere(
+        (s) => s.name == stateName,
+        orElse: () => CharacterState.idle,
+      );
+      setState(state);
+    } catch (e) {
+      print('Error changing state to $stateName: $e');
+    }
+  }
+
   // Set emotional tone
   void setEmotionalTone(EmotionalTone tone) {
     _currentTone = tone;
     _updateTTSForTone();
+    // FIRE the callback so UI/notifier can react
+    _onEmotionalToneChanged?.call(tone.name);
   }
+
+  // Change emotional tone (public method for external use)
+  Future<void> changeEmotionalTone(String toneName) async {
+    try {
+      final tone = EmotionalTone.values.firstWhere(
+        (t) => t.name == toneName,
+        orElse: () => EmotionalTone.neutral,
+      );
+      setEmotionalTone(tone);
+    } catch (e) {
+      print('Error changing emotional tone to $toneName: $e');
+    }
+  }
+
+  // (optional quality-of-life)
+  EmotionalTone get currentTone => _currentTone;
 
   // Set language
   Future<void> setLanguage(String languageCode) async {
     _currentLanguage = languageCode;
-    await _tts.setLanguage(languageCode);
+    // await _tts.setLanguage(languageCode); // This line is removed as TTS is now delegated
     print('🗣️ Character TTS language set to: $languageCode');
   }
 
-  // Speak with animation - Updated to support multilingual
+  // Speak with animation - Updated to delegate to LipSyncService
   Future<void> speakWithAnimation(String text, {EmotionalTone? tone, String? detectedLanguage}) async {
     if (tone != null) {
       setEmotionalTone(tone);
@@ -98,7 +159,13 @@ class CharacterInteractionEngine {
     
     setState(CharacterState.speaking);
     print('🗣️ Character speaking in $_currentLanguage: "${text.substring(0, text.length > 50 ? 50 : text.length)}..."');
-    await _tts.speak(text);
+    
+    // DELEGATE to LipSyncService instead of using local TTS
+    if (_lipSyncService != null) {
+      await _lipSyncService!.speakWithLipSync(text);
+    } else {
+      print('⚠️ Warning: LipSyncService not set, speech will not work');
+    }
   }
 
   // Listen mode
@@ -171,56 +238,51 @@ class CharacterInteractionEngine {
 
   void _updateAnimation() {
     // Update Rive animation based on state
-    switch (_currentState) {
-      case CharacterState.idle:
-        _characterController?.isActive = false;
-        break;
-      case CharacterState.listening:
-        // Trigger listening animation
-        break;
-      case CharacterState.speaking:
-        // Trigger speaking animation
-        break;
-      case CharacterState.thinking:
-        // Trigger thinking animation
-        break;
-      case CharacterState.concerned:
-        // Trigger concerned animation
-        break;
-      case CharacterState.happy:
-        // Trigger happy animation
-        break;
-      case CharacterState.explaining:
-        // Trigger explaining animation
-        break;
+    if (_animationManager == null) {
+      print('⚠️ Animation manager not set, cannot update animation');
+      return;
+    }
+
+    final stateName = _currentState.name;
+    print('🎭 Updating animation to: $stateName');
+    
+    try {
+      _animationManager!.playAnimation(stateName);
+    } catch (e) {
+      print('❌ Error playing animation $stateName: $e');
     }
   }
 
   void _updateTTSForTone() {
-    switch (_currentTone) {
-      case EmotionalTone.friendly:
-        _tts.setPitch(1.1);
-        _tts.setSpeechRate(0.5);
-        break;
-      case EmotionalTone.concerned:
-        _tts.setPitch(0.9);
-        _tts.setSpeechRate(0.4);
-        break;
-      case EmotionalTone.encouraging:
-        _tts.setPitch(1.2);
-        _tts.setSpeechRate(0.6);
-        break;
-      case EmotionalTone.professional:
-        _tts.setPitch(1.0);
-        _tts.setSpeechRate(0.5);
-        break;
-      case EmotionalTone.playful:
-        _tts.setPitch(1.3);
-        _tts.setSpeechRate(0.7);
-        break;
-      default:
-        _tts.setPitch(1.0);
-        _tts.setSpeechRate(0.5);
+    // Configure voice based on emotional tone via LipSyncService
+    if (_lipSyncService == null) {
+      print('⚠️ Warning: LipSyncService not set, cannot configure voice for tone');
+      return;
+    }
+
+    try {
+      switch (_currentTone) {
+        case EmotionalTone.friendly:
+          _lipSyncService!.configureVoice(pitch: 1.1, rate: 0.5);
+          break;
+        case EmotionalTone.concerned:
+          _lipSyncService!.configureVoice(pitch: 0.9, rate: 0.4);
+          break;
+        case EmotionalTone.encouraging:
+          _lipSyncService!.configureVoice(pitch: 1.2, rate: 0.6);
+          break;
+        case EmotionalTone.professional:
+          _lipSyncService!.configureVoice(pitch: 1.0, rate: 0.5);
+          break;
+        case EmotionalTone.playful:
+          _lipSyncService!.configureVoice(pitch: 1.3, rate: 0.7);
+          break;
+        default:
+          _lipSyncService!.configureVoice(pitch: 1.0, rate: 0.5);
+      }
+      print('🎭 Voice configured for tone: ${_currentTone.name}');
+    } catch (e) {
+      print('❌ Error configuring voice for tone: $e');
     }
   }
 
@@ -237,7 +299,8 @@ class CharacterInteractionEngine {
 
   // Dispose resources
   void dispose() {
-    _tts.stop();
-    _characterController?.dispose();
+    // _tts.stop(); // This line is removed as TTS is now delegated
+    // Animation manager will handle its own disposal
+    print('🎭 Character Interaction Engine disposed');
   }
 } 

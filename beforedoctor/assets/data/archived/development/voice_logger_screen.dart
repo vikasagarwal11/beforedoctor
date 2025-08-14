@@ -1,8 +1,8 @@
 // Filename: lib/screens/voice_logger_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import '../services/ai_prompt_service.dart';
+import 'package:speech_to_text/speech_to_text.dart';  // This is correct if package is added to pubspec.yaml
+import 'package:beforedoctor/core/services/ai_prompt_service.dart';
 
 class VoiceLoggerScreen extends StatefulWidget {
   const VoiceLoggerScreen({Key? key}) : super(key: key);

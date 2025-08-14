@@ -328,4 +328,79 @@ class LoggingService {
       _logger.i('CHARACTER_INTERACTION: $logData');
     }
   }
+
+  // Log AI orchestration interaction (from parent version)
+  Future<void> logAIOrchestration({
+    required List<String> symptoms,
+    String? question,
+    required Map<String, dynamic> cdcAssessment,
+    required Map<String, dynamic> medicalResponse,
+    required Map<String, dynamic> combinedResponse,
+  }) async {
+    try {
+      final logEntry = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'type': 'ai_orchestration',
+        'symptoms': symptoms,
+        'question': question,
+        'cdc_assessment': cdcAssessment,
+        'medical_response': medicalResponse,
+        'combined_response': combinedResponse,
+      };
+      
+      _logger.i('AI_ORCHESTRATION: $logEntry');
+    } catch (e) {
+      _logger.e('Error logging AI orchestration: $e');
+    }
+  }
+  
+  // Log risk assessment (from parent version)
+  Future<void> logRiskAssessment({
+    required int childAge,
+    required List<String> symptoms,
+    required String riskLevel,
+    required double riskScore,
+    required String source,
+  }) async {
+    try {
+      final logEntry = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'type': 'risk_assessment',
+        'child_age': childAge,
+        'symptoms': symptoms,
+        'risk_level': riskLevel,
+        'risk_score': riskScore,
+        'source': source,
+      };
+      
+      _logger.i('RISK_ASSESSMENT: $logEntry');
+    } catch (e) {
+      _logger.e('Error logging risk assessment: $e');
+    }
+  }
+  
+  // Log medical Q&A interaction (from parent version)
+  Future<void> logMedicalQA({
+    required String question,
+    required String response,
+    required String category,
+    required Map<String, dynamic> context,
+    required String source,
+  }) async {
+    try {
+      final logEntry = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'type': 'medical_qa',
+        'question': question,
+        'response': response,
+        'category': category,
+        'context': context,
+        'source': source,
+      };
+      
+      _logger.i('MEDICAL_QA: $logEntry');
+    } catch (e) {
+      _logger.e('Error logging medical Q&A: $e');
+    }
+  }
 } 

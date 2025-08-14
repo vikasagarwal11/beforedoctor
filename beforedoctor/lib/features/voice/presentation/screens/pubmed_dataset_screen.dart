@@ -14,6 +14,9 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
   final PubMedDatasetService _pubmedService = PubMedDatasetService();
   final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
   final Logger _logger = Logger();
+  
+  // Add TextEditingController as class field
+  final TextEditingController _searchController = TextEditingController();
 
   Map<String, dynamic> _statistics = {};
   List<Map<String, dynamic>> _recentStudies = [];
@@ -129,24 +132,10 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
           const SizedBox(height: 16),
           if (_statistics.isNotEmpty) ...[
             _buildStatRow('Total Studies', _statistics['total_studies'].toString()),
-            const SizedBox(height: 12),
-            const Text(
-              'Study Types:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...(_statistics['study_types'] as Map<String, int>).entries.map(
-              (entry) => _buildStatRow(entry.key, entry.value.toString()),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Age Groups:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...(_statistics['age_groups'] as Map<String, int>).entries.map(
-              (entry) => _buildStatRow(entry.key, entry.value.toString()),
-            ),
+            _buildStatRow('Pediatric Studies', _statistics['pediatric_studies'].toString()),
+            _buildStatRow('Treatment Studies', _statistics['treatment_studies'].toString()),
+            _buildStatRow('Age Range', _statistics['age_range'] ?? 'N/A'),
+            _buildStatRow('Last Updated', _statistics['last_updated'] ?? 'N/A'),
           ] else ...[
             const Text('No statistics available'),
           ],
@@ -157,19 +146,21 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
 
   Widget _buildStatRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Expanded(child: Text(label)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
+          ),
+          Expanded(
+            flex: 1,
             child: Text(
               value,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.grey[600]),
             ),
           ),
         ],
@@ -213,7 +204,7 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
           ),
           const SizedBox(height: 16),
           if (_recentStudies.isNotEmpty) ...[
-            ..._recentStudies.map((study) => _buildStudyCard(study)),
+            ..._recentStudies.map((study) => _buildStudyItem(study)),
           ] else ...[
             const Text('No recent studies available'),
           ],
@@ -222,239 +213,56 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
     );
   }
 
-  Widget _buildStudyCard(Map<String, dynamic> study) {
+  Widget _buildStudyItem(Map<String, dynamic> study) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            study['title'] ?? 'No title',
+            study['title'] ?? 'Untitled Study',
             style: const TextStyle(fontWeight: FontWeight.bold),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Text(
+            study['authors'] ?? 'Unknown Authors',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 4),
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue[100],
+                  color: _getEvidenceColor(study['evidence_level']),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  study['study_type'] ?? 'Unknown',
-                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                  study['evidence_level'] ?? 'Unknown',
+                  style: const TextStyle(fontSize: 10, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Score: ${(study['relevance_score'] as double).toStringAsFixed(2)}',
-                  style: TextStyle(fontSize: 12, color: Colors.green[700]),
-                ),
+              Text(
+                study['year']?.toString() ?? 'Unknown Year',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (study['symptom_focus'] != null && (study['symptom_focus'] as List).isNotEmpty) ...[
-            Text(
-              'Symptoms: ${(study['symptom_focus'] as List).join(', ')}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildTreatmentRecommendationsCard() {
-    if (_treatmentRecommendations.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.medical_services, color: Colors.orange[600], size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  '💊 Treatment Recommendations',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text('Search for a symptom to get treatment recommendations'),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.medical_services, color: Colors.orange[600], size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '💊 Treatment for: $_selectedSymptom',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Evidence level
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _getEvidenceLevelColor(_treatmentRecommendations['evidence_level']),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Evidence Level: ${_treatmentRecommendations['evidence_level']}',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          // Studies found
-          Text(
-            'Studies Found: ${_treatmentRecommendations['studies_found']}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          
-          // Treatments
-          if (_treatmentRecommendations['treatments'] != null && 
-              (_treatmentRecommendations['treatments'] as List).isNotEmpty) ...[
-            const Text(
-              'Common Treatments:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...(_treatmentRecommendations['treatments'] as List).map(
-              (treatment) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green[600], size: 16),
-                    const SizedBox(width: 8),
-                    Text(treatment),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          
-          // Recommendations
-          if (_treatmentRecommendations['recommendations'] != null && 
-              (_treatmentRecommendations['recommendations'] as List).isNotEmpty) ...[
-            const Text(
-              'Recommendations:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...(_treatmentRecommendations['recommendations'] as List).map(
-              (rec) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.lightbulb, color: Colors.blue[600], size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(rec)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          
-          // Cautions
-          if (_treatmentRecommendations['cautions'] != null && 
-              (_treatmentRecommendations['cautions'] as List).isNotEmpty) ...[
-            const Text(
-              'Cautions:',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-            ),
-            const SizedBox(height: 8),
-            ...(_treatmentRecommendations['cautions'] as List).map(
-              (caution) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.red[600], size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(caution, style: const TextStyle(color: Colors.red))),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Color _getEvidenceLevelColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'strong':
+  Color _getEvidenceColor(String? level) {
+    switch (level?.toLowerCase()) {
+      case 'high':
         return Colors.green;
       case 'moderate':
         return Colors.orange;
@@ -501,6 +309,7 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
           ),
           const SizedBox(height: 16),
           TextField(
+            controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Enter symptom (e.g., fever, cough, vomiting)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -513,11 +322,8 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
                     )
                   : const Icon(Icons.search),
                 onPressed: _isLoading ? null : () {
-                  final text = (context.findRenderObject() as RenderBox?)
-                      ?.findChild<EditableText>()
-                      ?.controller
-                      ?.text;
-                  if (text != null && text.isNotEmpty) {
+                  final text = _searchController.text;
+                  if (text.isNotEmpty) {
                     _searchTreatmentRecommendations(text);
                   }
                 },
@@ -533,6 +339,103 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
           const Text(
             'Common symptoms: fever, cough, vomiting, diarrhea, rash, pain, headache',
             style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreatmentRecommendationsCard() {
+    if (_treatmentRecommendations.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.medical_services, color: Colors.orange[600], size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '💊 Treatment Recommendations for "$_selectedSymptom"',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildRecommendationRow('Studies Found', _treatmentRecommendations['studies_found'].toString()),
+          _buildRecommendationRow('Evidence Level', _treatmentRecommendations['evidence_level'] ?? 'N/A'),
+          if (_treatmentRecommendations['treatments'] != null) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Common Treatments:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            ...(_treatmentRecommendations['treatments'] as List).take(3).map((treatment) => 
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 2),
+                child: Text('• $treatment'),
+              )
+            ),
+          ],
+          if (_treatmentRecommendations['age_considerations'] != null) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Age Considerations:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            ...(_treatmentRecommendations['age_considerations'] as List).take(2).map((consideration) => 
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 2),
+                child: Text('• $consideration'),
+              )
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(value),
           ),
         ],
       ),
@@ -592,6 +495,8 @@ class _PubMedDatasetScreenState extends State<PubMedDatasetScreen> {
 
   @override
   void dispose() {
+    // Proper disposal of TextEditingController
+    _searchController.dispose();
     _characterEngine.dispose();
     super.dispose();
   }

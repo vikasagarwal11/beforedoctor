@@ -1,6 +1,10 @@
+//beforedoctor/lib/core/services/symptom_extraction_service.dart
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
+
+final AppConfig _config = AppConfig.instance;
 
 class SymptomExtractionService {
   final String _openaiApiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
@@ -60,18 +64,21 @@ Return only the JSON array:
       // Try OpenAI first
       try {
         final response = await http.post(
-          Uri.parse('https://api.openai.com/v1/chat/completions'),
+          //Uri.parse('https://api.x.ai/v1/chat/completions),
+          Uri.parse(_config.openaiApiEndpoint),
           headers: {
             'Authorization': 'Bearer $_openaiApiKey',
             'Content-Type': 'application/json',
           },
           body: jsonEncode({
-            'model': 'gpt-4o',
+            //'model': 'gpt-4o',
+            'model': _config.openaiModel,
             'messages': [
               {'role': 'system', 'content': 'You are a pediatric symptom extraction assistant. Return only valid JSON arrays.'},
               {'role': 'user', 'content': prompt},
             ],
-            'temperature': 0.1,
+            //'temperature': 0.1,
+            'temperature': _config.openaiTemperature,
             'max_tokens': 200,
           }),
         );
@@ -97,18 +104,21 @@ Return only the JSON array:
       // Try Grok as fallback
       try {
         final response = await http.post(
-          Uri.parse('https://api.grok.x.ai/v1/chat/completions'),
+          //Uri.parse('https://api.grok.x.ai/v1/chat/completions'),
+          Uri.parse(_config.xaiGrokApiEndpoint),
           headers: {
             'Authorization': 'Bearer $_grokApiKey',
             'Content-Type': 'application/json',
           },
           body: jsonEncode({
-            'model': 'grok-1',
+            //'model': 'grok-1',
+            'model': _config.xaiGrokModel,
             'messages': [
               {'role': 'system', 'content': 'You are a pediatric symptom extraction assistant. Return only valid JSON arrays.'},
               {'role': 'user', 'content': prompt},
             ],
-            'temperature': 0.1,
+            // 'temperature': 0.1,
+            'temperature': _config.xaiGrokTemperature,  
             'max_tokens': 200,
           }),
         );

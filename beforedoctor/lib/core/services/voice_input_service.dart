@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:http/http.dart' as http;
 // import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 
 class VoiceInputService {
@@ -236,8 +237,8 @@ class VoiceInputService {
   /// Call xAI Grok Voice API
   Future<Map<String, dynamic>> _callGrokAPI(String transcription, List<String> symptoms) async {
     try {
-      final url = Uri.parse('https://api.x.ai/v1/chat/completions');
-      
+      //final url = Uri.parse('https://api.x.ai/v1/chat/completions');
+      final url = Uri.parse(_config.xaiGrokApiEndpoint);
       final response = await http.post(
         url,
         headers: {
@@ -245,7 +246,8 @@ class VoiceInputService {
           'Authorization': 'Bearer ${_config.xaiGrokApiKey}',
         },
         body: jsonEncode({
-          'model': 'grok-beta',
+          //'model': 'grok-beta',
+          'model': _config.xaiGrokModel,
           'messages': [
             {
               'role': 'system',
@@ -257,7 +259,8 @@ class VoiceInputService {
             }
           ],
           'max_tokens': 500,
-          'temperature': 0.3,
+          //'temperature': 0.3,
+          'temperature': _config.xaiGrokTemperature,
         }),
       );
 
@@ -284,7 +287,8 @@ class VoiceInputService {
   /// Call OpenAI Realtime Audio API
   Future<Map<String, dynamic>> _callOpenAIAPI(String transcription, List<String> symptoms) async {
     try {
-      final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+      //final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final url = Uri.parse(_config.openaiApiEndpoint);
       
       final response = await http.post(
         url,
@@ -293,7 +297,8 @@ class VoiceInputService {
           'Authorization': 'Bearer ${_config.openaiApiKey}',
         },
         body: jsonEncode({
-          'model': 'gpt-4o',
+          //'model': 'gpt-4o',
+          'model': _config.openaiModel,
           'messages': [
             {
               'role': 'system',
@@ -305,7 +310,8 @@ class VoiceInputService {
             }
           ],
           'max_tokens': 500,
-          'temperature': 0.3,
+          // 'temperature': 0.3,
+          'temperature': _config.openaiTemperature,
         }),
       );
 
