@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
+// import 'package:model_viewer_plus/model_viewer_plus.dart';  // COMMENTED OUT - replacing with flutter_gl
 import 'package:logger/logger.dart';
 
 /// Loads GLB assets as base64 data URI for reliable WebView rendering
@@ -197,25 +197,66 @@ class _Mouse3DState extends State<Mouse3D> {
         child: Stack(
           children: [
             // 3D Model Viewer
-            ModelViewer(
-              key: ValueKey(_src),
-              src: _src!,
-              alt: '3D Mouse Character',
-              autoPlay: true,
-              autoRotate: true,
-              autoRotateDelay: 0,
-              cameraControls: true,
-              ar: false,
-              interactionPrompt: InteractionPrompt.none,
-              backgroundColor: Colors.transparent,
-              onWebViewCreated: (controller) async {
-                _controller = controller;
-                _logger.i('🎭 WebView created for 3D model');
-                
-                // For now, just notify that controller is ready
-                // JavaScript injection will be handled by CharacterAnimator
-                widget.onReady?.call(controller);
-              },
+            // ModelViewer( // COMMENTED OUT - replacing with flutter_gl
+            //   key: ValueKey(_src),
+            //   src: _src!,
+            //   alt: '3D Mouse Character',
+            //   autoPlay: true,
+            //   autoRotate: true,
+            //   autoRotateDelay: 0,
+            //   cameraControls: true,
+            //   ar: false,
+            //   interactionPrompt: InteractionPrompt.none,
+            //   backgroundColor: Colors.transparent,
+            //   onWebViewCreated: (controller) async {
+            //     _controller = controller;
+            //     _logger.i('🎭 WebView created for 3D model');
+                 
+            //     // For now, just notify that controller is ready
+            //     // JavaScript injection will be handled by CharacterAnimator
+            //     widget.onReady?.call(controller);
+            //   },
+            // ),
+            
+            // PLACEHOLDER: 3D Model (flutter_gl coming soon)
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue, width: 2),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.view_in_ar,
+                      size: 48,
+                      color: Colors.blue[700],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '3D Model Placeholder',
+                      style: TextStyle(
+                        color: Colors.blue[700],
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'flutter_gl implementation\ncoming soon!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.blue[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             
             // Debug overlay

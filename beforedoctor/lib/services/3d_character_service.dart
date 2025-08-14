@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:webview_flutter/webview_flutter.dart';  // COMMENTED OUT - replacing with flutter_gl
 import 'dart:convert';
 
 /// Service for managing 3D character rendering and animations
@@ -19,7 +19,7 @@ class ThreeDCharacterService {
 
   String _currentState = _stateIdle;
   bool _isInitialized = false;
-  WebViewController? _webViewController;
+  // WebViewController? _webViewController; // COMMENTED OUT - replacing with flutter_gl
 
   /// Initialize the 3D character service
   Future<void> initialize() async {
@@ -258,9 +258,9 @@ class ThreeDCharacterService {
     _currentState = state;
     
     // Execute JavaScript to change character state
-    if (_webViewController != null) {
-      await _webViewController!.runJavaScript('changeCharacterState("$state")');
-    }
+    // if (_webViewController != null) { // COMMENTED OUT - replacing with flutter_gl
+    //   await _webViewController!.runJavaScript('changeCharacterState("$state")'); // COMMENTED OUT - replacing with flutter_gl
+    // } // COMMENTED OUT - replacing with flutter_gl
     
     print('🎭 Character state changed to: $state');
   }
@@ -271,9 +271,9 @@ class ThreeDCharacterService {
     
     await changeState(_stateSpeaking);
     
-    if (_webViewController != null) {
-      await _webViewController!.runJavaScript('startLipSync()');
-    }
+    // if (_webViewController != null) { // COMMENTED OUT - replacing with flutter_gl
+    //   await _webViewController!.runJavaScript('startLipSync()'); // COMMENTED OUT - replacing with flutter_gl
+    // } // COMMENTED OUT - replacing with flutter_gl
     
     print('🎭 Lip sync started');
   }
@@ -284,17 +284,17 @@ class ThreeDCharacterService {
     
     await changeState(_stateIdle);
     
-    if (_webViewController != null) {
-      await _webViewController!.runJavaScript('stopLipSync()');
-    }
+    // if (_webViewController != null) { // COMMENTED OUT - replacing with flutter_gl
+    //   await _webViewController!.runJavaScript('stopLipSync()'); // COMMENTED OUT - replacing with flutter_gl
+    // } // COMMENTED OUT - replacing with flutter_gl
     
     print('🎭 Lip sync stopped');
   }
 
   /// Set WebViewController reference
-  void setWebViewController(WebViewController controller) {
-    _webViewController = controller;
-  }
+  // void setWebViewController(WebViewController controller) { // COMMENTED OUT - replacing with flutter_gl
+  //   _webViewController = controller; // COMMENTED OUT - replacing with flutter_gl
+  // } // COMMENTED OUT - replacing with flutter_gl
 
   /// Get current state
   String get currentState => _currentState;
@@ -304,7 +304,7 @@ class ThreeDCharacterService {
 
   /// Dispose resources
   void dispose() {
-    _webViewController = null;
+    // _webViewController = null; // COMMENTED OUT - replacing with flutter_gl
     _isInitialized = false;
   }
 } 

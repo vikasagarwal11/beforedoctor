@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+// import 'package:webview_flutter/webview_flutter.dart';  // COMMENTED OUT - replacing with flutter_gl
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/3d_character_service.dart';
 import '../../../../services/stt_service.dart';
@@ -24,7 +24,7 @@ class _DoctorCharacterScreenState extends ConsumerState<DoctorCharacterScreen> {
   final TranslationService _translationService = TranslationService();
   final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
 
-  WebViewController? _webViewController;
+  // WebViewController? _webViewController; // COMMENTED OUT - replacing with flutter_gl
   bool _isInitialized = false;
   bool _isListening = false;
   bool _isSpeaking = false;
@@ -158,19 +158,68 @@ class _DoctorCharacterScreenState extends ConsumerState<DoctorCharacterScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: WebViewWidget(
-          controller: WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..loadHtmlString(_characterService.getCharacterHTML())
-            ..setNavigationDelegate(
-              NavigationDelegate(
-                onPageFinished: (String url) {
-                  _webViewController = WebViewController();
-                  _characterService.setWebViewController(_webViewController!);
-                  print('🎭 3D Character loaded successfully');
-                },
-              ),
+        // child: WebViewWidget( // COMMENTED OUT - replacing with flutter_gl
+        //   controller: WebViewController()
+        //     ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        //     ..loadHtmlString(_characterService.getCharacterHTML())
+        //     ..setNavigationDelegate(
+        //       NavigationDelegate(
+        //         onPageFinished: (String url) {
+        //           _webViewController = WebViewController();
+        //           _characterService.setWebViewController(_webViewController!);
+        //           print('🎭 3D Character loaded successfully');
+        //         },
+        //       ),
+        //     ),
+        // ),
+        
+        // PLACEHOLDER: 3D Character (flutter_gl coming soon)
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.purple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.purple, width: 2),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.face,
+                  size: 64,
+                  color: Colors.purple[700],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Dr. Healthie',
+                  style: TextStyle(
+                    color: Colors.purple[700],
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '3D Character Placeholder',
+                  style: TextStyle(
+                    color: Colors.purple[600],
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'flutter_gl implementation\ncoming soon!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.purple[500],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
+          ),
         ),
       ),
     );

@@ -76,8 +76,8 @@ dependencies:
   permission_handler: ^11.3.1  # iOS/Android permissions
   
   # 3D Character Integration
-  webview_flutter: ^4.7.0  # WebView for 3D character rendering
-  model_viewer_plus: ^1.7.0  # 3D GLTF model rendering
+  # webview_flutter: ^4.7.0  # WebView for 3D character rendering - COMMENTED OUT
+  # model_viewer_plus: ^1.7.0  # 3D GLTF model rendering - COMMENTED OUT
   
   # Logging
   logger: ^2.0.2  # Structured logging with Firebase Analytics/Crashlytics integration
