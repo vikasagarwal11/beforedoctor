@@ -1,0 +1,84 @@
+{
+  "@@locale": "en",
+  "app_title": "Dr. Healthie",
+  "app_subtitle": "Voice-Driven Health App",
+  
+  "mic_button_listening": "Listening",
+  "mic_button_ready": "Tap to talk",
+  "mic_button_listening_hint": "Hold the button to stop listening.",
+  "mic_button_ready_hint": "Tap once and then speak.",
+  "mic_button_accessibility": "Microphone button for voice input",
+  
+  "status_ready": "Ready",
+  "status_listening_child": "I'm listening",
+  "status_listening_parent": "Listening",
+  "status_processing_child": "Thinking...",
+  "status_processing_parent": "Processing...",
+  "status_speaking_child": "Let me tell you",
+  "status_speaking_parent": "Speaking...",
+  "status_complete_child": "All done!",
+  "status_complete_parent": "Complete",
+  "status_concern_child": "Let's tell a grown-up",
+  "status_concern_parent": "Concern noted",
+  
+  "character_state": "Character",
+  "language_label": "Language",
+  "status_label": "Status",
+  
+  "conversation_header": "Conversation",
+  "conversation_start": "Tap \"Start Conversation\" to begin",
+  "conversation_you_said": "You said:",
+  "conversation_response": "Response:",
+  "conversation_processing": "Processing...",
+  
+  "error_loading_model": "Error Loading 3D Model",
+  "loading_3d_character": "Loading 3D Character...",
+  "selected_character": "Selected: {character}",
+  "@selected_character": {
+    "description": "Shows which 3D character is selected",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "start_conversation": "Start Conversation",
+  "stop_listening": "Stop Listening",
+  
+  "audience_kid": "Kid Mode",
+  "audience_parent": "Parent Mode",
+  
+  "page_chat": "Chat",
+  "page_insights": "Insights", 
+  "page_log": "Log",
+  "page_settings": "Settings",
+  
+  "prompt_1_child": "Say 'ouch' if something hurts",
+  "prompt_2_child": "Tell me what's bothering you",
+  "prompt_3_child": "Point and tell me where it hurts",
+  "prompt_4_child": "Is it a little, medium, or a lot?",
+  "prompt_5_child": "Any other tummy or throat feelings?",
+  
+  "prompt_1_parent": "Describe the symptom in your own words",
+  "prompt_2_parent": "How long has this been going on?",
+  "prompt_3_parent": "Any fever, rash, vomiting, or trouble breathing?",
+  "prompt_4_parent": "Anything that makes it better or worse?",
+  
+  "feedback_1_child": "Got it! I'm thinking...",
+  "feedback_2_child": "Thanks! I'll tell you what I think.",
+  "feedback_3_child": "Nice job. Let's try one more question.",
+  
+  "feedback_1_parent": "Heard you. Analyzing now...",
+  "feedback_2_parent": "Here's what I'm seeing.",
+  "feedback_3_parent": "One follow-up to make it clearer.",
+  
+  "concern_child": "Let's tell a grown-up right away.",
+  "concern_parent": "This might need prompt attention. Consider calling your pediatrician or urgent care.",
+  
+  "a11y_tap_to_talk_label": "Tap to talk",
+  "a11y_tap_to_talk_hint": "Tap once and then speak",
+  "a11y_listening_label": "Listening. Long press to stop.",
+  "a11y_listening_hint": "Hold the button to stop listening."
+}

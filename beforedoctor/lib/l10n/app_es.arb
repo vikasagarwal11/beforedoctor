@@ -1,0 +1,84 @@
+{
+  "@@locale": "es",
+  "app_title": "Dr. Healthie",
+  "app_subtitle": "Aplicación de Salud por Voz",
+  
+  "mic_button_listening": "Escuchando",
+  "mic_button_ready": "Toca para hablar",
+  "mic_button_listening_hint": "Mantén presionado el botón para dejar de escuchar.",
+  "mic_button_ready_hint": "Toca una vez y luego habla.",
+  "mic_button_accessibility": "Botón del micrófono para entrada de voz",
+  
+  "status_ready": "Listo",
+  "status_listening_child": "Te estoy escuchando",
+  "status_listening_parent": "Escuchando",
+  "status_processing_child": "Pensando...",
+  "status_processing_parent": "Procesando...",
+  "status_speaking_child": "Déjame contarte",
+  "status_speaking_parent": "Hablando...",
+  "status_complete_child": "¡Todo listo!",
+  "status_complete_parent": "Completado",
+  "status_concern_child": "Vamos a contarle a un adulto",
+  "status_concern_parent": "Preocupación anotada",
+  
+  "character_state": "Personaje",
+  "language_label": "Idioma",
+  "status_label": "Estado",
+  
+  "conversation_header": "Conversación",
+  "conversation_start": "Toca \"Iniciar Conversación\" para comenzar",
+  "conversation_you_said": "Dijiste:",
+  "conversation_response": "Respuesta:",
+  "conversation_processing": "Procesando...",
+  
+  "error_loading_model": "Error al Cargar Modelo 3D",
+  "loading_3d_character": "Cargando Personaje 3D...",
+  "selected_character": "Seleccionado: {character}",
+  "@selected_character": {
+    "description": "Muestra qué personaje 3D está seleccionado",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "start_conversation": "Iniciar Conversación",
+  "stop_listening": "Dejar de Escuchar",
+  
+  "audience_kid": "Modo Niño",
+  "audience_parent": "Modo Padre",
+  
+  "page_chat": "Chat",
+  "page_insights": "Información",
+  "page_log": "Registro",
+  "page_settings": "Configuración",
+  
+  "prompt_1_child": "Di 'ay' si algo te duele",
+  "prompt_2_child": "Dime qué te molesta",
+  "prompt_3_child": "Señala y dime dónde te duele",
+  "prompt_4_child": "¿Es poco, medio o mucho?",
+  "prompt_5_child": "¿Otras sensaciones en la barriga o garganta?",
+  
+  "prompt_1_parent": "Describe el síntoma con tus propias palabras",
+  "prompt_2_parent": "¿Cuánto tiempo lleva pasando?",
+  "prompt_3_parent": "¿Fiebre, sarpullido, vómitos o dificultad para respirar?",
+  "prompt_4_parent": "¿Algo que lo mejore o empeore?",
+  
+  "feedback_1_child": "¡Entendido! Estoy pensando...",
+  "feedback_2_child": "¡Gracias! Te diré qué pienso.",
+  "feedback_3_child": "Buen trabajo. Probemos una pregunta más.",
+  
+  "feedback_1_parent": "Te escuché. Analizando ahora...",
+  "feedback_2_parent": "Esto es lo que estoy viendo.",
+  "feedback_3_parent": "Una pregunta más para aclararlo.",
+  
+  "concern_child": "Vamos a contarle a un adulto ahora mismo.",
+  "concern_parent": "Esto podría necesitar atención inmediata. Considera llamar a tu pediatra o urgencias.",
+  
+  "a11y_tap_to_talk_label": "Toca para hablar",
+  "a11y_tap_to_talk_hint": "Toca una vez y luego habla",
+  "a11y_listening_label": "Escuchando. Mantén presionado para parar.",
+  "a11y_listening_hint": "Mantén el botón para dejar de escuchar."
+}

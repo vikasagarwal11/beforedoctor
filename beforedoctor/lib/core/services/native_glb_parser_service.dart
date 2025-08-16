@@ -1,6 +1,9 @@
-import 'dart:typed_data';
-import 'dart:math' as math;
+import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
@@ -90,288 +93,204 @@ class BoundingBox {
 
 /// GLB Chunk Header
 class GLBChunk {
-  final int length;
   final int type;
+  final int length;
   final Uint8List data;
 
-  GLBChunk({
-    required this.length,
-    required this.type,
-    required this.data,
-  });
+  GLBChunk(this.type, this.length, this.data);
 
   @override
   String toString() => 'GLBChunk(type: $type, length: $length bytes)';
 }
 
-/// Native GLB Parser Service
-/// Parses GLB files and extracts 3D geometry for rendering
+/// Parse request with LOD parameters
+class ParseRequest {
+  final Uint8List glbBytes;
+  final int? targetFaceCount;
+  
+  ParseRequest(this.glbBytes, this.targetFaceCount);
+}
+
+/// Native GLB Parser Service with Performance Optimization
+/// Parses GLB files asynchronously to prevent main thread blocking
 class NativeGLBParserService {
   final Logger _logger = Logger();
   
-  /// Parse GLB file and return 3D model data
-  Future<Model3D?> parseGLB(Uint8List glbData) async {
+  // Performance optimization: cache parsed models
+  final Map<String, Model3D> _modelCache = {};
+  final Map<String, Map<String, dynamic>> _statsCache = {};
+  
+  // Async parsing queue to prevent blocking
+  static final Queue<Completer<Model3D>> _parsingQueue = Queue();
+  static bool _isProcessing = false;
+
+  /// Parse GLB data asynchronously to prevent main thread blocking
+  Future<Model3D?> parseGLBAsync(Uint8List glbBytes, {String? modelKey, int? targetFaceCount}) async {
+    final key = modelKey ?? _generateModelKey(glbBytes);
+    
+    // Check cache first
+    if (_modelCache.containsKey(key)) {
+      _logger.i('💾 Returning cached model: $key');
+      return _modelCache[key];
+    }
+    
+    // Add to parsing queue
+    final completer = Completer<Model3D>();
+    _parsingQueue.add(completer);
+    
+    // Process queue if not already processing
+    if (!_isProcessing) {
+      _processParsingQueue(glbBytes, key, targetFaceCount);
+    }
+    
+    return completer.future;
+  }
+
+  /// Process the parsing queue to prevent multiple simultaneous operations
+  void _processParsingQueue(Uint8List glbBytes, String key, int? targetFaceCount) async {
+    if (_isProcessing) return;
+    
+    _isProcessing = true;
+    
     try {
-      _logger.i('🧩 Starting GLB parsing...');
-      
-      // GLB Header: 12 bytes
-      if (glbData.length < 12) {
-        throw Exception('GLB file too small');
+      while (_parsingQueue.isNotEmpty) {
+        final completer = _parsingQueue.removeFirst();
+        
+        try {
+          // Parse on background thread with LOD optimization
+          final model = await compute(_parseGLBOnBackground, ParseRequest(glbBytes, targetFaceCount));
+          
+          if (model != null) {
+            // Cache the parsed model
+            _modelCache[key] = model;
+            _statsCache[key] = getModelStats(model);
+            
+            completer.complete(model);
+            _logger.i('✅ Model parsed and cached: $key (${model.faces.length} faces)');
+          } else {
+            completer.completeError('Failed to parse GLB data');
+          }
+        } catch (e) {
+          completer.completeError('Parsing error: $e');
+        }
       }
-      
-      // Check GLB magic number (0x46546C67 = "glTF")
-      final magic = glbData.sublist(0, 4);
-      if (magic[0] != 0x67 || magic[1] != 0x6C || magic[2] != 0x54 || magic[3] != 0x46) {
-        throw Exception('Invalid GLB magic number');
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  /// Parse GLB data on background thread with LOD optimization
+  static Model3D? _parseGLBOnBackground(ParseRequest request) {
+    // This runs on a background thread
+    try {
+      final model = _parseGLBInternal(request.glbBytes);
+      if (model != null && request.targetFaceCount != null) {
+        return _applyLODOptimization(model, request.targetFaceCount!);
       }
-      
-      // Parse version and length
-      final version = _readUint32(glbData, 4);
-      final totalLength = _readUint32(glbData, 8);
-      
-      _logger.i('✅ GLB header validated: version $version, total length: $totalLength bytes');
-      
-      // Parse chunks
-      final chunks = _parseChunks(glbData, 12);
-      _logger.i('📦 Found ${chunks.length} GLB chunks');
-      
-      // Try to parse real GLB data
-      final realModel = _parseRealGLBData(chunks);
-      if (realModel != null) {
-        _logger.i('✅ Successfully parsed real GLB data: $realModel');
-        return realModel;
-      }
-      
-      // Fallback to placeholder if real parsing fails
-      _logger.w('⚠️ Real GLB parsing failed, falling back to placeholder model');
-      return _createPlaceholderModel('hippo.glb');
-      
-    } catch (e, stackTrace) {
-      _logger.e('❌ Failed to parse GLB: $e', error: e, stackTrace: stackTrace);
+      return model;
+    } catch (e) {
       return null;
     }
   }
 
-  /// Parse GLB chunks from binary data
-  List<GLBChunk> _parseChunks(Uint8List data, int startOffset) {
-    final chunks = <GLBChunk>[];
-    int offset = startOffset;
-    
-    while (offset < data.length - 8) {
-      final length = _readUint32(data, offset);
-      final type = _readUint32(data, offset + 4);
+  /// Internal GLB parsing logic (runs on background thread)
+  static Model3D? _parseGLBInternal(Uint8List glbBytes) {
+    try {
+      // Validate GLB header
+      if (glbBytes.length < 12) return null;
       
-      if (length <= 0 || offset + 8 + length > data.length) {
-        _logger.w('⚠️ Invalid chunk at offset $offset: length=$length');
-        break;
+      final magic = String.fromCharCodes(glbBytes.take(4));
+      if (magic != 'glTF') return null;
+      
+      final version = _readUint32(glbBytes, 4);
+      final totalLength = _readUint32(glbBytes, 8);
+      
+      if (glbBytes.length != totalLength) return null;
+      
+      // Parse chunks
+      final chunks = _parseChunksInternal(glbBytes);
+      if (chunks.length < 2) return null;
+      
+      // Find JSON and BIN chunks
+      final jsonChunk = chunks.firstWhere((c) => c.type == 0x4E4F534A, orElse: () => chunks[0]);
+      final binChunk = chunks.firstWhere((c) => c.type == 0x004E4942, orElse: () => chunks[0]);
+      
+      if (jsonChunk.type != 0x4E4F534A || binChunk.type != 0x004E4942) {
+        return null;
       }
       
-      final chunkData = data.sublist(offset + 8, offset + 8 + length);
-      chunks.add(GLBChunk(
-        length: length,
-        type: type,
-        data: chunkData,
-      ));
+      // Parse JSON data
+      final jsonString = String.fromCharCodes(jsonChunk.data);
+      final jsonData = json.decode(jsonString) as Map<String, dynamic>;
       
-      _logger.i('📦 Chunk: type=$type, length=$length bytes');
-      offset += 8 + length;
+      // Extract model name
+      final modelName = jsonData['asset']?['generator'] ?? 'Unknown Model';
+      
+      // Create realistic model from parsed data
+      return _createRealisticModelInternal(modelName, jsonData, binChunk);
+      
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Parse GLB chunks on background thread
+  static List<GLBChunk> _parseChunksInternal(Uint8List glbBytes) {
+    final chunks = <GLBChunk>[];
+    int offset = 12; // Skip header
+    
+    while (offset < glbBytes.length) {
+      if (offset + 8 > glbBytes.length) break;
+      
+      final chunkLength = _readUint32(glbBytes, offset);
+      final chunkType = _readUint32(glbBytes, offset + 4);
+      
+      if (offset + 8 + chunkLength > glbBytes.length) break;
+      
+      final chunkData = glbBytes.sublist(offset + 8, offset + 8 + chunkLength);
+      chunks.add(GLBChunk(chunkType, chunkLength, chunkData));
+      
+      offset += 8 + chunkLength;
     }
     
     return chunks;
   }
 
-  /// Try to parse real GLB data from chunks
-  Model3D? _parseRealGLBData(List<GLBChunk> chunks) {
+  /// Create realistic model from parsed GLB data (background thread)
+  static Model3D _createRealisticModelInternal(String modelName, Map<String, dynamic> jsonData, GLBChunk binChunk) {
     try {
-      // Find JSON chunk (type 0x4E4F534A = "JSON")
-      final jsonChunk = chunks.firstWhere(
-        (chunk) => chunk.type == 0x4E4F534A,
-        orElse: () => throw Exception('No JSON chunk found'),
-      );
-      
-      // Find BIN chunk (type 0x004E4942 = "BIN")
-      final binChunk = chunks.firstWhere(
-        (chunk) => chunk.type == 0x004E4942,
-        orElse: () => throw Exception('No BIN chunk found'),
-      );
-      
-      _logger.i('📄 JSON chunk: ${jsonChunk.length} bytes');
-      _logger.i('💾 BIN chunk: ${binChunk.length} bytes');
-      
-      // Parse JSON metadata
-      final jsonString = utf8.decode(jsonChunk.data);
-      final jsonData = json.decode(jsonString) as Map<String, dynamic>;
-      
-      // Extract basic info
-      final asset = jsonData['asset'] as Map<String, dynamic>?;
-      final modelName = asset?['generator'] ?? 'Unknown Model';
-      
-      _logger.i('🏷️ Model: $modelName');
-      
-      // For now, create a more realistic model based on GLB data
-      // In a full implementation, we would parse the actual mesh data
-      return _createRealisticModel(modelName, jsonData, binChunk);
-      
-    } catch (e) {
-      _logger.w('⚠️ Real GLB parsing failed: $e');
-      return null;
-    }
-  }
-
-  /// Create a realistic model based on GLB data
-  Model3D _createRealisticModel(String modelName, Map<String, dynamic> jsonData, GLBChunk binChunk) {
-    _logger.i('🎨 Creating realistic 3D model: $modelName');
-    
-    try {
-      // Extract mesh information from JSON
+      // Extract mesh information
       final meshes = jsonData['meshes'] as List<dynamic>? ?? [];
       final accessors = jsonData['accessors'] as List<dynamic>? ?? [];
       final bufferViews = jsonData['bufferViews'] as List<dynamic>? ?? [];
       
-      _logger.i('📊 GLB contains: ${meshes.length} meshes, ${accessors.length} accessors, ${bufferViews.length} buffer views');
-      
       if (meshes.isEmpty || accessors.isEmpty || bufferViews.isEmpty) {
-        _logger.w('⚠️ No valid mesh data found, falling back to placeholder');
-        return _createPlaceholderModel(modelName);
+        return _createPlaceholderModelInternal(modelName);
       }
       
-      // Find the first mesh with vertex data
-      final mesh = meshes.first as Map<String, dynamic>;
-      final primitives = mesh['primitives'] as List<dynamic>? ?? [];
+      // Find position and index accessors
+      final positionAccessor = _findPositionAccessor(accessors, meshes);
+      final indexAccessor = _findIndexAccessor(accessors, meshes);
       
-      if (primitives.isEmpty) {
-        _logger.w('⚠️ No primitives found in mesh, falling back to placeholder');
-        return _createPlaceholderModel(modelName);
+      if (positionAccessor == null || indexAccessor == null) {
+        return _createPlaceholderModelInternal(modelName);
       }
       
-      final primitive = primitives.first as Map<String, dynamic>;
-      final attributes = primitive['attributes'] as Map<String, dynamic>? ?? {};
+      // Parse vertex positions
+      final vertices = _parseVertexPositions(binChunk, positionAccessor, bufferViews);
       
-      // Find position, normal, and index accessors
-      final positionAccessorIndex = attributes['POSITION'] as int?;
-      final normalAccessorIndex = attributes['NORMAL'] as int?;
-      final indicesAccessorIndex = primitive['indices'] as int?;
+      // Parse face indices
+      final faces = _parseFaceIndices(binChunk, indexAccessor, bufferViews);
       
-      if (positionAccessorIndex == null) {
-        _logger.w('⚠️ No position data found, falling back to placeholder');
-        return _createPlaceholderModel(modelName);
+      if (vertices.isEmpty || faces.isEmpty) {
+        return _createPlaceholderModelInternal(modelName);
       }
       
-      // Get accessor data
-      final positionAccessor = accessors[positionAccessorIndex] as Map<String, dynamic>;
-      final positionBufferViewIndex = positionAccessor['bufferView'] as int?;
+      // Generate colors and create model
+      final colors = _generateColors(vertices.length);
+      final boundingBox = _calculateBoundingBox(vertices);
       
-      if (positionBufferViewIndex == null) {
-        _logger.w('⚠️ No buffer view for positions, falling back to placeholder');
-        return _createPlaceholderModel(modelName);
-      }
-      
-      final positionBufferView = bufferViews[positionBufferViewIndex] as Map<String, dynamic>;
-      final positionOffset = positionBufferView['byteOffset'] as int? ?? 0;
-      final positionCount = positionAccessor['count'] as int? ?? 0;
-      final positionComponentType = positionAccessor['componentType'] as int? ?? 5126; // GL_FLOAT
-      final positionType = positionAccessor['type'] as String? ?? 'VEC3';
-      
-      _logger.i('📐 Position data: count=$positionCount, type=$positionType, offset=$positionOffset');
-      
-      // Parse vertex positions from binary data
-      final vertices = <Vertex3D>[];
-      final colors = <Color>[];
-      
-      if (positionType == 'VEC3' && positionComponentType == 5126) { // GL_FLOAT
-        final floatCount = positionCount * 3; // x, y, z
-        final dataOffset = positionOffset;
-        
-        for (int i = 0; i < positionCount; i++) {
-          final baseOffset = dataOffset + (i * 12); // 3 floats * 4 bytes
-          
-          if (baseOffset + 11 < binChunk.data.length) {
-            final x = _readFloat32(binChunk.data, baseOffset);
-            final y = _readFloat32(binChunk.data, baseOffset + 4);
-            final z = _readFloat32(binChunk.data, baseOffset + 8);
-            
-            // Generate color based on position
-            final color = _generateColor(x, y, z);
-            
-            vertices.add(Vertex3D(
-              x: x,
-              y: y,
-              z: z,
-              nx: 0, // Will calculate later
-              ny: 0,
-              nz: 0,
-              u: 0,
-              v: 0,
-            ));
-            colors.add(color);
-          }
-        }
-      }
-      
-      if (vertices.isEmpty) {
-        _logger.w('⚠️ No vertices parsed, falling back to placeholder');
-        return _createPlaceholderModel(modelName);
-      }
-      
-      // Parse indices if available
-      final faces = <Face3D>[];
-      if (indicesAccessorIndex != null) {
-        final indicesAccessor = accessors[indicesAccessorIndex] as Map<String, dynamic>;
-        final indicesBufferViewIndex = indicesAccessor['bufferView'] as int?;
-        
-        if (indicesBufferViewIndex != null) {
-          final indicesBufferView = bufferViews[indicesBufferViewIndex] as Map<String, dynamic>;
-          final indicesOffset = indicesBufferView['byteOffset'] as int? ?? 0;
-          final indicesCount = indicesAccessor['count'] as int? ?? 0;
-          final indicesComponentType = indicesAccessor['componentType'] as int? ?? 5123; // GL_UNSIGNED_SHORT
-          
-          _logger.i('🔗 Indices data: count=$indicesCount, type=$indicesComponentType, offset=$indicesOffset');
-          
-          if (indicesComponentType == 5123) { // GL_UNSIGNED_SHORT
-            for (int i = 0; i < indicesCount; i += 3) {
-              final baseOffset = indicesOffset + (i * 2); // 2 bytes per index
-              
-              if (baseOffset + 5 < binChunk.data.length) {
-                final v1 = _readUint16(binChunk.data, baseOffset);
-                final v2 = _readUint16(binChunk.data, baseOffset + 2);
-                final v3 = _readUint16(binChunk.data, baseOffset + 4);
-                
-                if (v1 < vertices.length && v2 < vertices.length && v3 < vertices.length) {
-                  faces.add(Face3D(v1: v1, v2: v2, v3: v3));
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      // If no faces were parsed, create simple triangulation
-      if (faces.isEmpty && vertices.length >= 3) {
-        _logger.i('🔗 Creating simple triangulation from ${vertices.length} vertices');
-        for (int i = 0; i < vertices.length - 2; i++) {
-          faces.add(Face3D(v1: i, v2: i + 1, v3: i + 2));
-        }
-      }
-      
-      // Calculate bounding box
-      double minX = double.infinity, minY = double.infinity, minZ = double.infinity;
-      double maxX = -double.infinity, maxY = -double.infinity, maxZ = -double.infinity;
-      
-      for (final vertex in vertices) {
-        minX = math.min(minX, vertex.x);
-        minY = math.min(minY, vertex.y);
-        minZ = math.min(minZ, vertex.z);
-        maxX = math.max(maxX, vertex.x);
-        maxY = math.max(maxY, vertex.y);
-        maxZ = math.max(maxZ, vertex.z);
-      }
-      
-      final boundingBox = BoundingBox(
-        minX: minX, minY: minY, minZ: minZ,
-        maxX: maxX, maxY: maxY, maxZ: maxZ,
-      );
-      
-      final model = Model3D(
+      return Model3D(
         vertices: vertices,
         faces: faces,
         colors: colors,
@@ -381,172 +300,344 @@ class NativeGLBParserService {
         originalFaceCount: faces.length,
       );
       
-      _logger.i('✅ Real GLB mesh data parsed: Model3D($modelName: ${vertices.length} vertices, ${faces.length} faces)');
-      return model;
-      
     } catch (e) {
-      _logger.w('⚠️ Error parsing real GLB mesh data: $e');
-      _logger.i('🔄 Falling back to placeholder model');
-      return _createPlaceholderModel(modelName);
+      return _createPlaceholderModelInternal(modelName);
     }
   }
 
-  /// Generate colors based on vertex position
-  Color _generateColor(double x, double y, double z) {
-    // Create vibrant, varied colors with better contrast
-    final r = ((x + 1) * 0.5 * 200 + 55).clamp(0, 255).toInt(); // Avoid too dark
-    final g = ((y + 1) * 0.5 * 200 + 55).clamp(0, 255).toInt(); // Avoid too dark
-    final b = ((z + 1) * 0.5 * 200 + 55).clamp(0, 255).toInt(); // Avoid too dark
-    
-    // Ensure minimum brightness for visibility
-    final minBrightness = 100;
-    if (r + g + b < minBrightness * 3) {
-      final factor = minBrightness * 3 / (r + g + b);
-      return Color.fromARGB(255, 
-        (r * factor).clamp(0, 255).toInt(),
-        (g * factor).clamp(0, 255).toInt(),
-        (b * factor).clamp(0, 255).toInt(),
-      );
+  /// Find position accessor for mesh data
+  static Map<String, dynamic>? _findPositionAccessor(List<dynamic> accessors, List<dynamic> meshes) {
+    try {
+      for (final mesh in meshes) {
+        final primitives = mesh['primitives'] as List<dynamic>? ?? [];
+        for (final primitive in primitives) {
+          final attributes = primitive['attributes'] as Map<String, dynamic>? ?? {};
+          final positionAccessorIndex = attributes['POSITION'];
+          if (positionAccessorIndex != null && positionAccessorIndex < accessors.length) {
+            return accessors[positionAccessorIndex] as Map<String, dynamic>;
+          }
+        }
+      }
+    } catch (e) {
+      // Continue with fallback
     }
-    
-    return Color.fromARGB(255, r, g, b);
+    return null;
   }
 
-  /// Create a placeholder 3D model for testing
-  Model3D _createPlaceholderModel(String modelName) {
-    _logger.i('🎨 Creating placeholder 3D model: $modelName');
+  /// Find index accessor for mesh data
+  static Map<String, dynamic>? _findIndexAccessor(List<dynamic> accessors, List<dynamic> meshes) {
+    try {
+      for (final mesh in meshes) {
+        final primitives = mesh['primitives'] as List<dynamic>? ?? [];
+        for (final primitive in primitives) {
+          final indicesAccessorIndex = primitive['indices'];
+          if (indicesAccessorIndex != null && indicesAccessorIndex < accessors.length) {
+            return accessors[indicesAccessorIndex] as Map<String, dynamic>;
+          }
+        }
+      }
+    } catch (e) {
+      // Continue with fallback
+    }
+    return null;
+  }
+
+  /// Parse vertex positions from binary data
+  static List<Vertex3D> _parseVertexPositions(GLBChunk binChunk, Map<String, dynamic> accessor, List<dynamic> bufferViews) {
+    try {
+      final count = accessor['count'] as int? ?? 0;
+      final bufferViewIndex = accessor['bufferView'] as int? ?? 0;
+      
+      if (bufferViewIndex >= bufferViews.length) return [];
+      
+      final bufferView = bufferViews[bufferViewIndex] as Map<String, dynamic>;
+      final offset = bufferView['byteOffset'] as int? ?? 0;
+      final byteStride = bufferView['byteStride'] as int? ?? 12; // 3 floats * 4 bytes
+      
+      final vertices = <Vertex3D>[];
+      
+      for (int i = 0; i < count; i++) {
+        final byteOffset = offset + (i * byteStride);
+        if (byteOffset + 12 <= binChunk.data.length) {
+          final x = _readFloat32(binChunk.data, byteOffset);
+          final y = _readFloat32(binChunk.data, byteOffset + 4);
+          final z = _readFloat32(binChunk.data, byteOffset + 8);
+          
+          vertices.add(Vertex3D(
+            x: x, y: y, z: z,
+            nx: 0, ny: 0, nz: 1, // Default normal
+            u: 0, v: 0, // Default UV
+          ));
+        }
+      }
+      
+      return vertices;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Parse face indices from binary data
+  static List<Face3D> _parseFaceIndices(GLBChunk binChunk, Map<String, dynamic> accessor, List<dynamic> bufferViews) {
+    try {
+      final count = accessor['count'] as int? ?? 0;
+      final bufferViewIndex = accessor['bufferView'] as int? ?? 0;
+      
+      if (bufferViewIndex >= bufferViews.length) return [];
+      
+      final bufferView = bufferViews[bufferViewIndex] as Map<String, dynamic>;
+      final offset = bufferView['byteOffset'] as int? ?? 0;
+      final componentType = accessor['componentType'] as int? ?? 5125; // GL_UNSIGNED_SHORT
+      
+      final faces = <Face3D>[];
+      final indicesPerFace = 3; // Triangles
+      
+      for (int i = 0; i < count; i += indicesPerFace) {
+        if (i + 2 < count) {
+          int v1, v2, v3;
+          
+          if (componentType == 5125) { // GL_UNSIGNED_SHORT
+            v1 = _readUint16(binChunk.data, offset + (i * 2));
+            v2 = _readUint16(binChunk.data, offset + ((i + 1) * 2));
+            v3 = _readUint16(binChunk.data, offset + ((i + 2) * 2));
+          } else { // GL_UNSIGNED_INT
+            v1 = _readUint32(binChunk.data, offset + (i * 4));
+            v2 = _readUint32(binChunk.data, offset + ((i + 1) * 4));
+            v3 = _readUint32(binChunk.data, offset + ((i + 2) * 4));
+          }
+          
+          faces.add(Face3D(v1: v1, v2: v2, v3: v3));
+        }
+      }
+      
+      return faces;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Generate colors for vertices
+  static List<Color> _generateColors(int count) {
+    final colors = <Color>[];
+    for (int i = 0; i < count; i++) {
+      final hue = (i * 137.5) % 360; // Golden angle for good distribution
+      final saturation = 0.7;
+      final value = 0.8;
+      colors.add(HSVColor.fromAHSV(1.0, hue, saturation, value).toColor());
+    }
+    return colors;
+  }
+
+  /// Calculate bounding box for vertices
+  static BoundingBox _calculateBoundingBox(List<Vertex3D> vertices) {
+    if (vertices.isEmpty) {
+      return BoundingBox(minX: -1, minY: -1, minZ: -1, maxX: 1, maxY: 1, maxZ: 1);
+    }
     
-    // Create a simple cube
-    final vertices = <Vertex3D>[
-      // Front face
+    double minX = vertices[0].x, maxX = vertices[0].x;
+    double minY = vertices[0].y, maxY = vertices[0].y;
+    double minZ = vertices[0].z, maxZ = vertices[0].z;
+    
+    for (final vertex in vertices) {
+      minX = math.min(minX, vertex.x);
+      maxX = math.max(maxX, vertex.x);
+      minY = math.min(minY, vertex.y);
+      maxY = math.max(maxY, vertex.y);
+      minZ = math.min(minZ, vertex.z);
+      maxZ = math.max(maxZ, vertex.z);
+    }
+    
+    return BoundingBox(
+      minX: minX, minY: minY, minZ: minZ,
+      maxX: maxX, maxY: maxY, maxZ: maxZ,
+    );
+  }
+
+  /// Apply Level of Detail optimization to reduce model complexity
+  static Model3D _applyLODOptimization(Model3D model, int targetFaceCount) {
+    if (model.faces.length <= targetFaceCount) {
+      return model; // No optimization needed
+    }
+    
+    // Calculate reduction factor
+    final reductionFactor = targetFaceCount / model.faces.length;
+    final vertexReductionFactor = math.sqrt(reductionFactor); // Square root for 2D surface area
+    
+    // Create simplified model
+    final simplifiedVertices = <Vertex3D>[];
+    final simplifiedFaces = <Face3D>[];
+    final simplifiedColors = <Color>[];
+    
+    // Sample vertices based on reduction factor
+    final vertexStep = (1.0 / vertexReductionFactor).round();
+    final faceStep = (1.0 / reductionFactor).round();
+    
+    // Sample vertices
+    for (int i = 0; i < model.vertices.length; i += vertexStep) {
+      if (i < model.vertices.length) {
+        simplifiedVertices.add(model.vertices[i]);
+        if (i < model.colors.length) {
+          simplifiedColors.add(model.colors[i]);
+        }
+      }
+    }
+    
+    // Sample faces (ensure we don't exceed target)
+    for (int i = 0; i < model.faces.length && simplifiedFaces.length < targetFaceCount; i += faceStep) {
+      if (i < model.faces.length) {
+        final face = model.faces[i];
+        // Ensure face indices are within bounds of simplified vertices
+        if (face.v1 < simplifiedVertices.length && 
+            face.v2 < simplifiedVertices.length && 
+            face.v3 < simplifiedVertices.length) {
+          simplifiedFaces.add(face);
+        }
+      }
+    }
+    
+    // If we still have too many faces, use random sampling
+    if (simplifiedFaces.length > targetFaceCount) {
+      final random = math.Random(42); // Fixed seed for consistency
+      final shuffledFaces = List<Face3D>.from(simplifiedFaces);
+      shuffledFaces.shuffle(random);
+      simplifiedFaces.clear();
+      simplifiedFaces.addAll(shuffledFaces.take(targetFaceCount));
+    }
+    
+    // Create simplified bounding box
+    final simplifiedBoundingBox = _calculateBoundingBox(simplifiedVertices);
+    
+    return Model3D(
+      vertices: simplifiedVertices,
+      faces: simplifiedFaces,
+      colors: simplifiedColors,
+      boundingBox: simplifiedBoundingBox,
+      modelName: '${model.modelName} (LOD: ${simplifiedFaces.length}/${model.faces.length})',
+      originalVertexCount: model.originalVertexCount,
+      originalFaceCount: model.originalFaceCount,
+    );
+  }
+
+  /// Create placeholder model (fallback)
+  static Model3D _createPlaceholderModelInternal(String modelName) {
+    // Create a simple cube as fallback
+    final vertices = [
+      Vertex3D(x: -1, y: -1, z: -1, nx: 0, ny: 0, nz: -1, u: 0, v: 0),
+      Vertex3D(x: 1, y: -1, z: -1, nx: 0, ny: 0, nz: -1, u: 1, v: 0),
+      Vertex3D(x: 1, y: 1, z: -1, nx: 0, ny: 0, nz: -1, u: 1, v: 1),
+      Vertex3D(x: -1, y: 1, z: -1, nx: 0, ny: 0, nz: -1, u: 0, v: 1),
       Vertex3D(x: -1, y: -1, z: 1, nx: 0, ny: 0, nz: 1, u: 0, v: 0),
       Vertex3D(x: 1, y: -1, z: 1, nx: 0, ny: 0, nz: 1, u: 1, v: 0),
       Vertex3D(x: 1, y: 1, z: 1, nx: 0, ny: 0, nz: 1, u: 1, v: 1),
       Vertex3D(x: -1, y: 1, z: 1, nx: 0, ny: 0, nz: 1, u: 0, v: 1),
-      
-      // Back face
-      Vertex3D(x: -1, y: -1, z: -1, nx: 0, ny: 0, nz: -1, u: 1, v: 0),
-      Vertex3D(x: 1, y: -1, z: -1, nx: 0, ny: 0, nz: -1, u: 0, v: 0),
-      Vertex3D(x: 1, y: 1, z: -1, nx: 0, ny: 0, nz: -1, u: 0, v: 1),
-      Vertex3D(x: -1, y: 1, z: -1, nx: 0, ny: 0, nz: -1, u: 1, v: 1),
-      
-      // Left face
-      Vertex3D(x: -1, y: -1, z: -1, nx: -1, ny: 0, nz: 0, u: 0, v: 0),
-      Vertex3D(x: -1, y: -1, z: 1, nx: -1, ny: 0, nz: 0, u: 1, v: 0),
-      Vertex3D(x: -1, y: 1, z: 1, nx: -1, ny: 0, nz: 0, u: 1, v: 1),
-      Vertex3D(x: -1, y: 1, z: -1, nx: -1, ny: 0, nz: 0, u: 0, v: 1),
-      
-      // Right face
-      Vertex3D(x: 1, y: -1, z: -1, nx: 1, ny: 0, nz: 0, u: 1, v: 0),
-      Vertex3D(x: 1, y: -1, z: 1, nx: 1, ny: 0, nz: 0, u: 0, v: 0),
-      Vertex3D(x: 1, y: 1, z: 1, nx: 1, ny: 0, nz: 0, u: 0, v: 1),
-      Vertex3D(x: 1, y: 1, z: -1, nx: 1, ny: 0, nz: 0, u: 1, v: 1),
-      
-      // Top face
-      Vertex3D(x: -1, y: 1, z: -1, nx: 0, ny: 1, nz: 0, u: 0, v: 1),
-      Vertex3D(x: 1, y: 1, z: -1, nx: 0, ny: 1, nz: 0, u: 1, v: 1),
-      Vertex3D(x: 1, y: 1, z: 1, nx: 0, ny: 1, nz: 0, u: 1, v: 0),
-      Vertex3D(x: -1, y: 1, z: 1, nx: 0, ny: 1, nz: 0, u: 0, v: 0),
-      
-      // Bottom face
-      Vertex3D(x: -1, y: -1, z: -1, nx: 0, ny: -1, nz: 0, u: 1, v: 1),
-      Vertex3D(x: 1, y: -1, z: -1, nx: 0, ny: -1, nz: 0, u: 0, v: 1),
-      Vertex3D(x: 1, y: -1, z: 1, nx: 0, ny: -1, nz: 0, u: 0, v: 0),
-      Vertex3D(x: -1, y: -1, z: 1, nx: 0, ny: -1, nz: 0, u: 1, v: 0),
     ];
     
-    // Create faces (triangles) for the cube
-    final faces = <Face3D>[
-      // Front face
-      Face3D(v1: 0, v2: 1, v3: 2),
-      Face3D(v1: 0, v2: 2, v3: 3),
-      
-      // Back face
-      Face3D(v1: 4, v2: 5, v3: 6),
-      Face3D(v1: 4, v2: 6, v3: 7),
-      
-      // Left face
-      Face3D(v1: 8, v2: 9, v3: 10),
-      Face3D(v1: 8, v2: 10, v3: 11),
-      
-      // Right face
-      Face3D(v1: 12, v2: 13, v3: 14),
-      Face3D(v1: 12, v2: 14, v3: 15),
-      
-      // Top face
-      Face3D(v1: 16, v2: 17, v3: 18),
-      Face3D(v1: 16, v2: 18, v3: 19),
-      
-      // Bottom face
-      Face3D(v1: 20, v2: 21, v3: 22),
-      Face3D(v1: 20, v2: 22, v3: 23),
+    final faces = [
+      Face3D(v1: 0, v2: 1, v3: 2), Face3D(v1: 0, v2: 3, v3: 2), // Front
+      Face3D(v1: 1, v2: 5, v3: 6), Face3D(v1: 1, v2: 6, v3: 2), // Right
+      Face3D(v1: 5, v2: 4, v3: 7), Face3D(v1: 5, v2: 7, v3: 6), // Back
+      Face3D(v1: 4, v2: 0, v3: 3), Face3D(v1: 4, v2: 3, v3: 7), // Left
+      Face3D(v1: 3, v2: 2, v3: 6), Face3D(v1: 3, v2: 6, v3: 7), // Top
+      Face3D(v1: 4, v2: 5, v3: 1), Face3D(v1: 4, v2: 1, v3: 0), // Bottom
     ];
     
-    // Create colors for each face
-    final colors = <Color>[
-      Colors.blue,    // Front
-      Colors.blue,    // Front
-      Colors.green,   // Back
-      Colors.green,   // Back
-      Colors.red,     // Left
-      Colors.red,     // Left
-      Colors.orange,  // Right
-      Colors.orange,  // Right
-      Colors.yellow,  // Top
-      Colors.yellow,  // Top
-      Colors.purple,  // Bottom
-      Colors.purple,  // Bottom
-    ];
+    final colors = [Colors.red, Colors.green, Colors.blue, Colors.yellow, Colors.purple, Colors.orange];
     
-    final boundingBox = BoundingBox(
-      minX: -1, minY: -1, minZ: -1,
-      maxX: 1, maxY: 1, maxZ: 1,
-    );
-    
-    final model = Model3D(
+    return Model3D(
       vertices: vertices,
       faces: faces,
       colors: colors,
-      boundingBox: boundingBox,
-      modelName: modelName,
+      boundingBox: BoundingBox(minX: -1, minY: -1, minZ: -1, maxX: 1, maxY: 1, maxZ: 1),
+      modelName: '$modelName (Placeholder)',
       originalVertexCount: vertices.length,
       originalFaceCount: faces.length,
     );
-    
-    _logger.i('✅ Placeholder 3D model created: $model');
-    return model;
   }
 
-  /// Read 32-bit unsigned integer from byte array
-  int _readUint32(Uint8List data, int offset) {
-    return data[offset] |
-           (data[offset + 1] << 8) |
-           (data[offset + 2] << 16) |
-           (data[offset + 3] << 24);
+  // Helper methods for binary data reading
+  static int _readUint32(Uint8List data, int offset) {
+    return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
   }
 
-  /// Read 32-bit floating point number from byte array
-  double _readFloat32(Uint8List data, int offset) {
-    final bytes = data.sublist(offset, offset + 4);
-    return bytes.buffer.asFloat32List()[0];
-  }
-
-  /// Read 16-bit unsigned integer from byte array
-  int _readUint16(Uint8List data, int offset) {
+  static int _readUint16(Uint8List data, int offset) {
     return data[offset] | (data[offset + 1] << 8);
   }
 
-  /// Calculate model statistics
+  static double _readFloat32(Uint8List data, int offset) {
+    final bytes = data.sublist(offset, offset + 4);
+    final buffer = ByteData.view(bytes.buffer, bytes.offsetInBytes, bytes.length);
+    return buffer.getFloat32(0, Endian.little);
+  }
+
+  /// Get model statistics (cached)
   Map<String, dynamic> getModelStats(Model3D model) {
+    final key = model.modelName;
+    if (_statsCache.containsKey(key)) {
+      return _statsCache[key]!;
+    }
+    
+    final stats = _calculateModelStats(model);
+    _statsCache[key] = stats;
+    return stats;
+  }
+
+  /// Calculate model statistics
+  Map<String, dynamic> _calculateModelStats(Model3D model) {
+    final vertexCount = model.vertices.length;
+    final faceCount = model.faces.length;
+    final colorCount = model.colors.length;
+    
+    // Calculate memory usage (approximate)
+    final vertexMemory = vertexCount * 32; // 8 floats * 4 bytes
+    final faceMemory = faceCount * 12; // 3 ints * 4 bytes
+    final colorMemory = colorCount * 4; // 1 int * 4 bytes
+    final totalMemory = vertexMemory + faceMemory + colorMemory;
+    
+    // Calculate bounding box dimensions
+    final bb = model.boundingBox;
+    final width = (bb.maxX - bb.minX).abs();
+    final height = (bb.maxY - bb.minY).abs();
+    final depth = (bb.maxZ - bb.minZ).abs();
+    
     return {
-      'vertexCount': model.vertices.length,
-      'faceCount': model.faces.length,
-      'colorCount': model.colors.length,
-      'boundingBox': model.boundingBox.toString(),
-      'memoryUsage': '${(model.vertices.length * 8 * 8 + model.faces.length * 3 * 4) / 1024} KB',
+      'vertexCount': vertexCount,
+      'faceCount': faceCount,
+      'colorCount': colorCount,
+      'boundingBox': BoundingBox(
+        minX: bb.minX,
+        minY: bb.minY,
+        minZ: bb.minZ,
+        maxX: bb.maxX,
+        maxY: bb.maxY,
+        maxZ: bb.maxZ,
+      ),
+      'memoryUsage': '${(totalMemory / 1024).toStringAsFixed(2)} KB',
       'modelName': model.modelName,
       'originalVertexCount': model.originalVertexCount,
       'originalFaceCount': model.originalFaceCount,
     };
+  }
+
+  /// Clear model cache to free memory
+  void clearCache() {
+    _modelCache.clear();
+    _statsCache.clear();
+    _logger.i('🧹 Model cache cleared');
+  }
+
+  /// Get cache statistics
+  Map<String, dynamic> getCacheStats() {
+    return {
+      'cachedModels': _modelCache.length,
+      'cachedStats': _statsCache.length,
+      'totalMemory': '${(_modelCache.length * 1024).toStringAsFixed(2)} KB (estimated)',
+    };
+  }
+
+  /// Generate a unique key for model caching
+  String _generateModelKey(Uint8List glbBytes) {
+    // Use first 100 bytes as a simple hash for caching
+    final hash = glbBytes.take(100).fold(0, (prev, byte) => prev + byte);
+    return 'model_$hash';
   }
 }

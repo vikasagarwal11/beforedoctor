@@ -1,0 +1,84 @@
+{
+  "@@locale": "zh",
+  "app_title": "看医生前",
+  "app_subtitle": "语音驱动健康应用",
+  
+  "mic_button_listening": "正在听",
+  "mic_button_ready": "点击说话",
+  "mic_button_listening_hint": "长按按钮停止听。",
+  "mic_button_ready_hint": "点击一次然后说话。",
+  "mic_button_accessibility": "语音输入麦克风按钮",
+  
+  "status_ready": "就绪",
+  "status_listening_child": "我在听",
+  "status_listening_parent": "正在听",
+  "status_processing_child": "思考中...",
+  "status_processing_parent": "处理中...",
+  "status_speaking_child": "让我告诉你",
+  "status_speaking_parent": "说话中...",
+  "status_complete_child": "完成了！",
+  "status_complete_parent": "完成",
+  "status_concern_child": "让我们告诉大人",
+  "status_concern_parent": "已记录关注",
+  
+  "character_state": "角色",
+  "language_label": "语言",
+  "status_label": "状态",
+  
+  "conversation_header": "对话",
+  "conversation_start": "点击\"开始对话\"开始",
+  "conversation_you_said": "你说：",
+  "conversation_response": "回复：",
+  "conversation_processing": "处理中...",
+  
+  "error_loading_model": "加载3D模型错误",
+  "loading_3d_character": "加载3D角色中...",
+  "selected_character": "已选择：{character}",
+  "@selected_character": {
+    "description": "显示选择的3D角色",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "start_conversation": "开始对话",
+  "stop_listening": "停止听",
+  
+  "audience_kid": "儿童模式",
+  "audience_parent": "家长模式",
+  
+  "page_chat": "聊天",
+  "page_insights": "洞察",
+  "page_log": "记录",
+  "page_settings": "设置",
+  
+  "prompt_1_child": "如果疼就说'哎哟'",
+  "prompt_2_child": "告诉我什么让你烦恼",
+  "prompt_3_child": "指一指告诉我哪里疼",
+  "prompt_4_child": "是一点、中等还是很多？",
+  "prompt_5_child": "肚子或喉咙有其他感觉吗？",
+  
+  "prompt_1_parent": "用你自己的话描述症状",
+  "prompt_2_parent": "这种情况持续多久了？",
+  "prompt_3_parent": "有发烧、皮疹、呕吐或呼吸困难吗？",
+  "prompt_4_parent": "有什么会让它变好或变坏吗？",
+  
+  "feedback_1_child": "明白了！我在思考...",
+  "feedback_2_child": "谢谢！我会告诉你我的想法。",
+  "feedback_3_child": "做得好。让我们再试一个问题。",
+  
+  "feedback_1_parent": "听到了。正在分析...",
+  "feedback_2_parent": "这是我看到的。",
+  "feedback_3_parent": "再问一个让情况更清楚。",
+  
+  "concern_child": "让我们马上告诉大人。",
+  "concern_parent": "这可能需要及时关注。考虑联系儿科医生或急诊。",
+  
+  "a11y_tap_to_talk_label": "点击说话",
+  "a11y_tap_to_talk_hint": "点击一次然后说话",
+  "a11y_listening_label": "正在听。长按停止。",
+  "a11y_listening_hint": "按住按钮停止听。"
+}

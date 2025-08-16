@@ -1,71 +1,95 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
 
-final ThemeData pediatricTheme = ThemeData(
-  primaryColor: Color(0xFF4FC3F7), // Sky Blue
-  colorScheme: ColorScheme.fromSwatch().copyWith(
-    secondary: Color(0xFFFFCDD2), // Soft Peach
-    surface: Color(0xFFF0F9FF), // Light Blue Background
-    onSurface: Colors.black87,
-  ),
-  scaffoldBackgroundColor: Color(0xFFF0F9FF),
-  cardColor: Colors.white,
-  fontFamily: 'Raleway',
-  textTheme: TextTheme(
-    titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-    bodyMedium: TextStyle(fontSize: 16, color: Colors.black87),
-    titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
-    titleSmall: TextStyle(fontSize: 14, color: Colors.black54),
+/// Updated Pediatric Theme using Clinic Colors
+/// This provides a consistent, professional healthcare appearance
+ThemeData getPediatricTheme(BuildContext context) => clinicTheme(context).copyWith(
+  // Override with specific pediatric customizations
+  textTheme: clinicTheme(context).textTheme.copyWith(
+    headlineSmall: const TextStyle(
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.1,
+      color: ClinicColors.onSurface,
+      fontFamily: 'Nunito',
+    ),
+    titleMedium: const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      color: ClinicColors.onSurface,
+      fontFamily: 'Nunito',
+    ),
+    bodyLarge: const TextStyle(
+      fontSize: 16,
+      height: 1.3,
+      color: ClinicColors.onSurface,
+      fontFamily: 'Nunito',
+    ),
+    bodyMedium: const TextStyle(
+      fontSize: 15,
+      height: 1.3,
+      color: ClinicColors.onSurfaceMuted,
+      fontFamily: 'Nunito',
+    ),
+    labelLarge: const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: ClinicColors.onSurface,
+      fontFamily: 'Nunito',
+    ),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      backgroundColor: Color(0xFF4FC3F7),
-      foregroundColor: Colors.white,
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      backgroundColor: ClinicColors.primary,
+      foregroundColor: ClinicColors.white,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       elevation: 2,
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Color(0xFF4FC3F7), width: 2),
-      borderRadius: BorderRadius.circular(12),
+    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+    focusedBorder: const OutlineInputBorder(
+      borderSide: BorderSide(color: ClinicColors.primary, width: 2),
+      borderRadius: BorderRadius.all(Radius.circular(12)),
     ),
     enabledBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Color(0xFFBDBDBD), width: 1),
-      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: ClinicColors.onSurfaceMuted.withOpacity(0.3), width: 1),
+      borderRadius: const BorderRadius.all(Radius.circular(12)),
     ),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: ClinicColors.white,
   ),
   cardTheme: CardThemeData(
+    color: ClinicColors.white,
     elevation: 4,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
-    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
   ),
   appBarTheme: AppBarTheme(
-    backgroundColor: Color(0xFF4FC3F7),
-    foregroundColor: Colors.white,
+    backgroundColor: ClinicColors.primary,
+    foregroundColor: ClinicColors.white,
     elevation: 2,
-    titleTextStyle: TextStyle(
+    centerTitle: true,
+    titleTextStyle: const TextStyle(
       fontSize: 20,
       fontWeight: FontWeight.bold,
-      color: Colors.white,
+      color: ClinicColors.white,
     ),
   ),
-  iconTheme: IconThemeData(
-    color: Color(0xFF4FC3F7),
+  iconTheme: const IconThemeData(
+    color: ClinicColors.primary,
     size: 24,
   ),
-  floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: Color(0xFF4FC3F7),
-    foregroundColor: Colors.white,
+  floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    backgroundColor: ClinicColors.primary,
+    foregroundColor: ClinicColors.white,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
   ),
 ); 

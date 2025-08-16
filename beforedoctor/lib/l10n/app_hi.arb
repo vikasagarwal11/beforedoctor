@@ -1,0 +1,84 @@
+{
+  "@@locale": "hi",
+  "app_title": "डॉक्टर से पहले",
+  "app_subtitle": "आवाज से चलने वाला स्वास्थ्य ऐप",
+  
+  "mic_button_listening": "सुन रहा है",
+  "mic_button_ready": "बात करने के लिए टैप करें",
+  "mic_button_listening_hint": "सुनना बंद करने के लिए बटन को लंबे समय तक दबाएं।",
+  "mic_button_ready_hint": "एक बार टैप करें और फिर बोलें।",
+  "mic_button_accessibility": "आवाज इनपुट के लिए माइक्रोफोन बटन",
+  
+  "status_ready": "तैयार",
+  "status_listening_child": "मैं सुन रहा हूं",
+  "status_listening_parent": "सुन रहा है",
+  "status_processing_child": "सोच रहा हूं...",
+  "status_processing_parent": "प्रोसेसिंग...",
+  "status_speaking_child": "मुझे बताने दो",
+  "status_speaking_parent": "बोल रहा है...",
+  "status_complete_child": "हो गया!",
+  "status_complete_parent": "पूरा",
+  "status_concern_child": "चलो बड़ों को बताते हैं",
+  "status_concern_parent": "चिंता दर्ज की गई",
+  
+  "character_state": "पात्र",
+  "language_label": "भाषा",
+  "status_label": "स्थिति",
+  
+  "conversation_header": "बातचीत",
+  "conversation_start": "शुरू करने के लिए \"बातचीत शुरू करें\" पर टैप करें",
+  "conversation_you_said": "आपने कहा:",
+  "conversation_response": "जवाब:",
+  "conversation_processing": "प्रोसेसिंग...",
+  
+  "error_loading_model": "3D मॉडल लोड करने में त्रुटि",
+  "loading_3d_character": "3D पात्र लोड हो रहा है...",
+  "selected_character": "चयनित: {character}",
+  "@selected_character": {
+    "description": "दिखाता है कि कौन सा 3D पात्र चयनित है",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "start_conversation": "बातचीत शुरू करें",
+  "stop_listening": "सुनना बंद करें",
+  
+  "audience_kid": "बच्चा मोड",
+  "audience_parent": "माता-पिता मोड",
+  
+  "page_chat": "चैट",
+  "page_insights": "अंतर्दृष्टि",
+  "page_log": "लॉग",
+  "page_settings": "सेटिंग्स",
+  
+  "prompt_1_child": "अगर कुछ दर्द करता है तो 'आह' कहो",
+  "prompt_2_child": "मुझे बताओ क्या परेशान कर रहा है",
+  "prompt_3_child": "इशारा करो और बताओ कहां दर्द करता है",
+  "prompt_4_child": "क्या यह थोड़ा, मध्यम या बहुत है?",
+  "prompt_5_child": "पेट या गले में कोई और भावना?",
+  
+  "prompt_1_parent": "अपने शब्दों में लक्षण का वर्णन करें",
+  "prompt_2_parent": "यह कब से चल रहा है?",
+  "prompt_3_parent": "बुखार, चकत्ते, उल्टी या सांस लेने में तकलीफ?",
+  "prompt_4_parent": "कुछ ऐसा जो इसे बेहतर या बदतर बनाता है?",
+  
+  "feedback_1_child": "समझ गया! मैं सोच रहा हूं...",
+  "feedback_2_child": "धन्यवाद! मैं आपको बताऊंगा कि मैं क्या सोचता हूं।",
+  "feedback_3_child": "अच्छा काम। एक और सवाल आज़माते हैं।",
+  
+  "feedback_1_parent": "सुना। अभी विश्लेषण कर रहा हूं...",
+  "feedback_2_parent": "यह मैं देख रहा हूं।",
+  "feedback_3_parent": "एक और सवाल स्थिति को स्पष्ट करने के लिए।",
+  
+  "concern_child": "चलो अभी बड़ों को बताते हैं।",
+  "concern_parent": "इसे तत्काल ध्यान की आवश्यकता हो सकती है। अपने बाल रोग विशेषज्ञ या आपातकालीन देखभाल को कॉल करने पर विचार करें।",
+  
+  "a11y_tap_to_talk_label": "बात करने के लिए टैप करें",
+  "a11y_tap_to_talk_hint": "एक बार टैप करें और फिर बोलें",
+  "a11y_listening_label": "सुन रहा है। रोकने के लिए लंबे समय तक दबाएं।",
+  "a11y_listening_hint": "सुनना बंद करने के लिए बटन को पकड़ें."
+}

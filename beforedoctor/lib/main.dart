@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/config/app_config.dart';
 import 'theme/pediatric_theme.dart';
 import 'features/voice/presentation/screens/voice_logging_screen.dart';
 import 'features/voice/presentation/screens/voice_logger_screen.dart';
 import 'features/character/presentation/screens/enhanced_doctor_character_screen.dart';
+import 'features/color_based/presentation/screens/color_based_page.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +26,14 @@ class BeforeDoctorApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'BeforeDoctor',
-      theme: pediatricTheme,
+      theme: getPediatricTheme(context),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
+      
+      // Localization support
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'), // Default to English
     );
   }
 }
@@ -39,6 +47,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isInitialized = false;
+  Locale _currentLocale = const Locale('en');
 
   @override
   void initState() {
@@ -58,6 +67,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } catch (e) {
       print('❌ Error initializing app: $e');
     }
+  }
+
+  void _changeLanguage(Locale newLocale) {
+    setState(() {
+      _currentLocale = newLocale;
+    });
+    // Rebuild the app with new locale
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => MaterialApp(
+            title: 'BeforeDoctor',
+            theme: getPediatricTheme(context),
+            home: const HomeScreen(),
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: newLocale,
+          ),
+        ),
+      );
+    });
   }
 
   @override
@@ -85,6 +116,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          PopupMenuButton<Locale>(
+            icon: const Icon(Icons.language),
+            onSelected: _changeLanguage,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: Locale('en'),
+                child: Text('🇺🇸 English'),
+              ),
+              const PopupMenuItem(
+                value: Locale('es'),
+                child: Text('🇪🇸 Español'),
+              ),
+              const PopupMenuItem(
+                value: Locale('zh'),
+                child: Text('🇨🇳 中文'),
+              ),
+              const PopupMenuItem(
+                value: Locale('fr'),
+                child: Text('🇫🇷 Français'),
+              ),
+              const PopupMenuItem(
+                value: Locale('hi'),
+                child: Text('🇮🇳 हिंदी'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -113,9 +172,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Welcome to BeforeDoctor',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)?.app_title ?? 'Dr. Healthie',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -177,6 +236,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   subtitle: '3D Character Experience',
                   color: Colors.purple,
                   onTap: () => _navigateToDoctorCharacter(),
+                ),
+                _buildFeatureCard(
+                  icon: Icons.palette,
+                  title: 'Color Based Page',
+                  subtitle: 'Modern Gemini Interface',
+                  color: Colors.teal,
+                  onTap: () => _navigateToColorBasedPage(),
                 ),
               ],
             ),
@@ -381,6 +447,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const EnhancedDoctorCharacterScreen(),
+      ),
+    );
+  }
+
+  void _navigateToColorBasedPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ColorBasedPage(),
       ),
     );
   }

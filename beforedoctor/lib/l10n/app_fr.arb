@@ -1,0 +1,84 @@
+{
+  "@@locale": "fr",
+  "app_title": "AvantLeMédecin",
+  "app_subtitle": "Application de Santé Pilotée par la Voix",
+  
+  "mic_button_listening": "Écoute",
+  "mic_button_ready": "Appuyez pour parler",
+  "mic_button_listening_hint": "Maintenez le bouton enfoncé pour arrêter d'écouter.",
+  "mic_button_ready_hint": "Appuyez une fois puis parlez.",
+  "mic_button_accessibility": "Bouton du microphone pour saisie vocale",
+  
+  "status_ready": "Prêt",
+  "status_listening_child": "Je t'écoute",
+  "status_listening_parent": "Écoute",
+  "status_processing_child": "Je réfléchis...",
+  "status_processing_parent": "Traitement...",
+  "status_speaking_child": "Laisse-moi te dire",
+  "status_speaking_parent": "Parle...",
+  "status_complete_child": "C'est fini !",
+  "status_complete_parent": "Terminé",
+  "status_concern_child": "Disons-le à un adulte",
+  "status_concern_parent": "Préoccupation notée",
+  
+  "character_state": "Personnage",
+  "language_label": "Langue",
+  "status_label": "État",
+  
+  "conversation_header": "Conversation",
+  "conversation_start": "Appuyez sur \"Commencer la Conversation\" pour commencer",
+  "conversation_you_said": "Vous avez dit :",
+  "conversation_response": "Réponse :",
+  "conversation_processing": "Traitement...",
+  
+  "error_loading_model": "Erreur de Chargement du Modèle 3D",
+  "loading_3d_character": "Chargement du Personnage 3D...",
+  "selected_character": "Sélectionné : {character}",
+  "@selected_character": {
+    "description": "Affiche quel personnage 3D est sélectionné",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "start_conversation": "Commencer la Conversation",
+  "stop_listening": "Arrêter d'Écouter",
+  
+  "audience_kid": "Mode Enfant",
+  "audience_parent": "Mode Parent",
+  
+  "page_chat": "Chat",
+  "page_insights": "Aperçus",
+  "page_log": "Journal",
+  "page_settings": "Paramètres",
+  
+  "prompt_1_child": "Dis 'aïe' si quelque chose fait mal",
+  "prompt_2_child": "Dis-moi ce qui te dérange",
+  "prompt_3_child": "Montre et dis-moi où ça fait mal",
+  "prompt_4_child": "C'est un peu, moyen ou beaucoup ?",
+  "prompt_5_child": "D'autres sensations dans le ventre ou la gorge ?",
+  
+  "prompt_1_parent": "Décrivez le symptôme avec vos propres mots",
+  "prompt_2_parent": "Depuis combien de temps cela dure-t-il ?",
+  "prompt_3_parent": "Fièvre, éruption, vomissements ou difficulté à respirer ?",
+  "prompt_4_parent": "Quelque chose qui l'améliore ou l'aggrave ?",
+  
+  "feedback_1_child": "Compris ! Je réfléchis...",
+  "feedback_2_child": "Merci ! Je vais te dire ce que je pense.",
+  "feedback_3_child": "Bon travail. Essayons une autre question.",
+  
+  "feedback_1_parent": "Entendu. Analyse en cours...",
+  "feedback_2_parent": "Voici ce que je vois.",
+  "feedback_3_parent": "Une question de plus pour clarifier.",
+  
+  "concern_child": "Disons-le à un adulte tout de suite.",
+  "concern_parent": "Cela pourrait nécessiter une attention immédiate. Considérez appeler votre pédiatre ou les urgences.",
+  
+  "a11y_tap_to_talk_label": "Appuyez pour parler",
+  "a11y_tap_to_talk_hint": "Appuyez une fois puis parlez",
+  "a11y_listening_label": "Écoute. Appuyez longuement pour arrêter.",
+  "a11y_listening_hint": "Maintenez le bouton pour arrêter d'écouter."
+}

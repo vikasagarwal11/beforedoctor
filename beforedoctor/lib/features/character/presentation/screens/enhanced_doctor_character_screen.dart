@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rive/rive.dart';
-import 'package:getwidget/getwidget.dart';
 import 'package:logger/logger.dart';
-import 'package:flutter/services.dart' show rootBundle; // Added for _debugPrintAssetManifest
-import 'package:flutter/foundation.dart' show kDebugMode; // Added for kDebugMode
-import '../../../../core/providers/character_state_provider.dart';
-import '../../../../core/theme/pediatric_theme.dart';
-import '../widgets/mouse_3d_widget.dart';
+import '../../../../services/3d_character_service.dart';
+import '../../../../services/stt_service.dart';
+import '../../../../services/llm_service.dart';
+import '../../../../services/tts_service.dart';
+import '../../../../services/translation_service.dart';
+import '../../../../core/services/character_interaction_engine.dart';
 import '../../services/character_animator.dart';
-import '../../../../core/services/performance_monitor_service.dart'; // Performance monitoring
+import '../widgets/mouse_3d_widget.dart';
+import '../../../../core/theme/pediatric_theme.dart';
 
-/// Enhanced doctor character screen with Rive animations and lip-sync
+/// Enhanced 3D Character Screen with Native Flutter Rendering
 class EnhancedDoctorCharacterScreen extends ConsumerStatefulWidget {
   const EnhancedDoctorCharacterScreen({super.key});
 
@@ -23,277 +24,265 @@ class _EnhancedDoctorCharacterScreenState extends ConsumerState<EnhancedDoctorCh
     with TickerProviderStateMixin {
   final Logger _logger = Logger();
   
-  // Animation controllers
-  late AnimationController _fadeController;
-  late AnimationController _scaleController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  
-  // Rive controller
-  RiveAnimationController? _riveController;
-  StateMachineController? _stateMachineController;
-  
-  // 3D Character Animator
+  // Character Animation System
   CharacterAnimator? _characterAnimator;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
   
-  // UI state
-  bool _isInitialized = false;
-  bool _isTalking = false; // New state for talking control
+  // Service Instances
+  final ThreeDCharacterService _characterService = ThreeDCharacterService();
+  final STTService _sttService = STTService();
+  final LLMService _llmService = LLMService();
+  final TTSService _ttsService = TTSService();
+  final TranslationService _translationService = TranslationService();
+  final CharacterInteractionEngine _characterEngine = CharacterInteractionEngine.instance;
   
+  // Voice Interaction States
+  bool _isListening = false;
+  final bool _isSpeaking = false;
+  bool _isProcessing = false;
+  String _recognizedText = '';
+  String _aiResponse = '';
+  String _detectedLanguage = 'en';
+
   @override
   void initState() {
     super.initState();
-    
-    // Start performance monitoring for development
-    if (kDebugMode) {
-      PerformanceMonitorService.instance.startMonitoring(interval: const Duration(seconds: 10));
-    }
-    
-    _debugPrintAssetManifest(); // Add debug asset manifest check
     _initializeAnimations();
-    _initializeCharacterSystem();
-    _testAssetLoading(); // Add asset loading test
-  }
-
-  /// Debug function to check if 3D models are in the asset manifest
-  Future<void> _debugPrintAssetManifest() async {
-    try {
-      final manifest = await rootBundle.loadString('AssetManifest.json');
-      _logger.i('📋 Asset manifest loaded, length: ${manifest.length}');
-      
-      // Check for 3D models in the new location
-      final models = ['mouse.glb', 'hippo.glb', 'jaguar.glb', 'rabbit.glb'];
-      var foundCount = 0;
-      
-      for (final model in models) {
-        if (manifest.contains('assets/3d/$model')) {
-          _logger.i('✅ $model is in AssetManifest at assets/3d/');
-          foundCount++;
-        } else {
-          _logger.w('⛔ $model NOT in AssetManifest at assets/3d/');
-        }
-      }
-      
-      _logger.i('📊 Found $foundCount out of ${models.length} 3D models in assets/3d/');
-      
-      // Check if 3d folder is referenced
-      if (manifest.contains('assets/3d/')) {
-        _logger.i('✅ assets/3d/ folder is referenced in manifest');
-      } else {
-        _logger.w('⛔ assets/3d/ folder NOT found in manifest');
-      }
-      
-    } catch (e) {
-      _logger.e('❌ Failed to load AssetManifest: $e');
-    }
+    // Delay heavy operations to prevent frame skipping
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeCharacterSystem();
+      _initializeServices();
+    });
   }
 
   @override
-  void didUpdateWidget(covariant EnhancedDoctorCharacterScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _driveAnimation();
+  void dispose() {
+    _fadeController.dispose();
+    _characterAnimator?.dispose();
+    super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _driveAnimation();
-  }
-
-  /// Drive 3D animations based on character state
-  void _driveAnimation() {
-    if (_characterAnimator == null) return;
-    
-    final characterState = ref.read(characterStateProvider);
-    final clip = switch (characterState.currentState) {
-      'idle' => 'Idle',
-      'listening' => 'Listen',
-      'speaking' => 'Speak',
-      'thinking' => 'Think',
-      'happy' => 'Happy',
-      'concerned' => 'Concerned',
-      'explaining' => 'Explain',
-      _ => 'Idle', // Default fallback
-    };
-    
-    _logger.d('🎭 Driving animation: ${characterState.currentState} → $clip');
-    _characterAnimator?.play(clip);
-  }
-
-  /// Test asset loading to verify Flutter can access 3D model files
-  Future<void> _testAssetLoading() async {
+  Future<void> _initializeServices() async {
     try {
-      _logger.i('🧪 Testing 3D model asset loading...');
-      
-      // Test all 3D models in the new 3d folder
-      final models = ['mouse.glb', 'hippo.glb', 'jaguar.glb', 'rabbit.glb'];
-      var successCount = 0;
-      
-      for (final model in models) {
-        try {
-          final data = await rootBundle.load('assets/3d/$model');
-          _logger.i('✅ Successfully loaded assets/3d/$model: ${data.lengthInBytes} bytes');
-          successCount++;
-        } catch (e) {
-          _logger.w('⚠️ Failed to load assets/3d/$model: $e');
-        }
-      }
-      
-      _logger.i('📊 Asset loading test complete: $successCount out of ${models.length} models loaded successfully');
-      
+      // Initialize all services
+      await _characterService.initialize();
+      await _sttService.initialize();
+      await _llmService.initialize();
+      await _ttsService.initTTS();
+      await _translationService.preloadCommonLanguages();
+      await _characterEngine.initialize();
+
+      setState(() {
+        // _isInitialized = true; // Removed as per edit hint
+      });
+
+      _logger.i('🎭 All services initialized successfully');
     } catch (e) {
-      _logger.e('❌ Asset loading test failed: $e');
+      _logger.e('❌ Error initializing services: $e');
     }
   }
 
   void _initializeAnimations() {
-    // Fade animation for smooth transitions
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
-    // Scale animation for character interactions
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
+    _fadeController.forward();
   }
 
-  Future<void> _initializeCharacterSystem() async {
+  void _initializeCharacterSystem() {
+    _logger.i('🎭 Initializing Enhanced Character System');
+    // Use compute for heavy asset loading
+    _testAssetLoading();
+  }
+
+  Future<void> _testAssetLoading() async {
     try {
-      _logger.i('🎭 Initializing Enhanced Doctor Character Screen');
+      // Load asset directly in main isolate since rootBundle requires binding
+      final bytes = await rootBundle.load('assets/3d/jaguar.glb');
+      _logger.i('✅ Jaguar GLB loaded: ${bytes.lengthInBytes} bytes');
+    } catch (e) {
+      _logger.e('❌ Failed to load jaguar.glb: $e');
+    }
+  }
+
+  void _driveAnimation() {
+    if (_characterAnimator != null) {
+      final currentState = _characterService.currentState;
+      final animationName = _mapStateToAnimation(currentState);
+      _characterAnimator!.play(animationName);
+      _logger.i('🎭 Driving animation: $animationName for state: $currentState');
+    }
+  }
+
+  String _mapStateToAnimation(String state) {
+    switch (state.toLowerCase()) {
+      case 'idle':
+        return 'Idle';
+      case 'listening':
+        return 'Listen';
+      case 'speaking':
+        return 'Speak';
+      case 'thinking':
+        return 'Think';
+      case 'concerned':
+        return 'Concerned';
+      case 'urgent':
+        return 'Urgent';
+      case 'happy':
+        return 'Happy';
+      case 'explaining':
+        return 'Explain';
+      default:
+        return 'Idle';
+    }
+  }
+
+  // Voice Interaction Methods
+  Future<void> _toggleListening() async {
+    if (_isListening) {
+      await _stopListening();
+    } else {
+      await _startListening();
+    }
+  }
+
+  Future<void> _startListening() async {
+    try {
+      setState(() {
+        _isListening = true;
+        _recognizedText = '';
+      });
       
-      // Initialize the character state system
-      final characterStateNotifier = ref.read(characterStateProvider.notifier);
-      await characterStateNotifier.initialize();
+      _logger.i('🎤 Starting voice recognition...');
+      await _sttService.startListening(
+        onResult: (text, detectedLanguage) {
+          setState(() {
+            _recognizedText = text;
+            _detectedLanguage = detectedLanguage;
+          });
+        },
+        onError: (error) {
+          _logger.e('❌ STT Error: $error');
+        },
+      );
       
-      // Set initialized state directly
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-        _fadeController.forward();
-        _logger.i('🎭 Character system initialized successfully');
+      // Update character state
+      await _characterService.changeState('listening');
+      _driveAnimation();
+      
+    } catch (e) {
+      _logger.e('❌ Error starting voice recognition: $e');
+      setState(() {
+        _isListening = false;
+      });
+    }
+  }
+
+  Future<void> _stopListening() async {
+    try {
+      await _sttService.stopListening();
+      
+      setState(() {
+        _isListening = false;
+      });
+      
+      // Process recognized text
+      if (_recognizedText.isNotEmpty) {
+        await _processRecognizedText();
       }
       
-    } catch (e) {
-      _logger.e('❌ Error initializing character system: $e');
-      _showErrorSnackBar('Failed to initialize character system: $e');
-    }
-  }
-
-  void _onPhonemeChange(String phoneme) {
-  // phoneme arrives as one of: mouth_open_a/e/i/o/u, mouth_closed, etc.
-  // The animationManager is now managed by CharacterStateProvider,
-  // so we don't need to call it directly here.
-  _logger.d('👄 Phoneme change -> $phoneme');
-}
-
-
- void _onCharacterStateChange(String newState) {
-  // This callback is now handled by CharacterStateProvider.
-  // We can update the UI if needed, but the animation will play automatically.
-  _logger.d('🎭 Character state changed to: $newState');
-}
-
-
-  void _onEmotionalToneChange(String newTone) {
-    // This callback is now handled by CharacterStateProvider.
-    _logger.d('🎭 Emotional tone changed to: $newTone');
-  }
-
-  Future<void> _startConversation() async {
-    if (!_isInitialized) return;
-    
-    try {
-      // The conversation logic is now handled by CharacterStateProvider.
-      // We just need to trigger the state change.
-      final characterStateNotifier = ref.read(characterStateProvider.notifier);
-      await characterStateNotifier.startConversation();
+      // Update character state
+      await _characterService.changeState('idle');
+      _driveAnimation();
       
     } catch (e) {
-      _logger.e('❌ Error in conversation flow: $e');
-      _showErrorSnackBar('Conversation error: $e');
+      _logger.e('❌ Error stopping voice recognition: $e');
+      setState(() {
+        _isListening = false;
+      });
     }
   }
 
-  Future<void> _showEmotionalResponse(String emotion) async {
-    if (!_isInitialized) return;
+  Future<void> _processRecognizedText() async {
+    if (_recognizedText.isEmpty) return;
+    
+    setState(() {
+      _isProcessing = true;
+    });
     
     try {
-      final characterStateNotifier = ref.read(characterStateProvider.notifier);
-      await characterStateNotifier.showEmotionalResponse(emotion);
+      _logger.i('🧠 Processing recognized text: $_recognizedText');
+      
+      // Get AI response
+      final response = await _llmService.getLLMResponse(_recognizedText);
+      
+      setState(() {
+        _aiResponse = response;
+        _isProcessing = false;
+      });
+      
+      // Update character state
+      await _characterService.changeState('speaking');
+      _driveAnimation();
+      
+      // Speak the response
+      await _ttsService.speak(response);
+      
+      // Update character state back to idle
+      await _characterService.changeState('idle');
+      _driveAnimation();
+      
     } catch (e) {
-      _logger.e('❌ Error showing emotional response: $e');
+      _logger.e('❌ Error processing text: $e');
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
 
-  void _toggleTalking() {
-    setState(() {
-      _isTalking = !_isTalking;
-    });
-    _logger.d('Talking state toggled: $_isTalking');
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Color _getStateColor(String state) {
+    switch (state) {
+      case 'idle':
+        return Colors.green;
+      case 'listening':
+        return Colors.blue;
+      case 'speaking':
+        return Colors.orange;
+      case 'thinking':
+        return Colors.purple;
+      case 'concerned':
+        return Colors.red;
+      case 'urgent':
+        return Colors.red;
+      case 'happy':
+        return Colors.yellow;
+      case 'explaining':
+        return Colors.cyan;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to state changes - this will only trigger once due to state management
-    ref.listen(characterStateProvider, (previous, next) {
-      if (mounted && next.isInitialized && !_isInitialized) {
-        setState(() {
-          _isInitialized = next.isInitialized;
-        });
-        
-        if (next.isInitialized) {
-          _fadeController.forward();
-          _logger.i('🎭 Character system initialized successfully');
-        }
-      }
-    });
-
     return Scaffold(
       backgroundColor: PediatricTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 20),
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: Column(
               children: [
-                // Header
                 _buildHeader(),
-                
-                // Single character display area
-                _buildCharacterArea(),
-                
-                // Control panel
-                _buildControlPanel(),
-                
-                // Conversation area
+                _buildCharacterDisplay(),
+                _buildVoiceControls(),
+                _buildStatusIndicators(),
                 _buildConversationArea(),
               ],
             ),
@@ -306,730 +295,266 @@ class _EnhancedDoctorCharacterScreenState extends ConsumerState<EnhancedDoctorCh
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: PediatricTheme.primary,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
+      child: Row(
         children: [
-          // Main header row
-          Row(
-            children: [
-              Icon(
-                Icons.medical_services,
-                color: Colors.white,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dr. Care',
-                      style: PediatricTheme.textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Your Pediatric Health Assistant',
-                      style: PediatricTheme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildStatusIndicator(),
-            ],
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: PediatricTheme.onBackground),
+            onPressed: () => Navigator.pop(context),
           ),
-          
-          // Performance monitoring widget (development only)
-          if (kDebugMode) ...[
-            const SizedBox(height: 12),
-            _buildPerformanceMonitor(),
-          ],
+          const Expanded(
+            child: Text(
+              'Dr. Healthie',
+              style: TextStyle(
+                color: PediatricTheme.onBackground,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              _isListening ? Icons.mic : Icons.mic_off,
+              color: _isListening ? Colors.green : PediatricTheme.onBackground,
+            ),
+            onPressed: _toggleListening,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusIndicator() {
-    // Use ref.watch for UI updates that should rebuild
-    final characterState = ref.watch(characterStateProvider);
-    
-    Color statusColor;
-    IconData statusIcon;
-    String statusText;
-    
-    if (!_isInitialized) {
-      statusColor = Colors.orange;
-      statusIcon = Icons.hourglass_empty;
-      statusText = 'Initializing';
-    } else if (characterState.isSpeaking) {
-      statusColor = Colors.green;
-      statusIcon = Icons.record_voice_over;
-      statusText = 'Speaking';
-    } else if (characterState.isListening) {
-      statusColor = Colors.blue;
-      statusIcon = Icons.hearing;
-      statusText = 'Listening';
-    } else {
-      statusColor = Colors.grey;
-      statusIcon = Icons.check_circle;
-      statusText = 'Ready';
-    }
-    
+  Widget _buildCharacterDisplay() {
+    return Container(
+      width: double.infinity,
+      height: 400,
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.3),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Mouse3D(
+            onReady: (controller) {
+              _characterAnimator = CharacterAnimator(controller);
+              _logger.i('🎭 3D Character Animator ready');
+              _driveAnimation();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVoiceControls() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Start Conversation Button (Primary Voice Control)
+          Container(
+            width: double.infinity,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.blue[600],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.mic, color: Colors.white, size: 28),
+                const SizedBox(width: 12),
+                Text('Start Conversation', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicators() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Character State
+          _buildStatusChip(
+            'Character',
+            _characterService.currentState,
+            _getStateColor(_characterService.currentState),
+          ),
+
+          // Language
+          _buildStatusChip(
+            'Language',
+            _detectedLanguage.toUpperCase(),
+            Colors.orange,
+          ),
+
+          // Status
+          _buildStatusChip(
+            'Status',
+            _isListening ? 'Listening' : (_isSpeaking ? 'Speaking' : 'Ready'),
+            _isListening ? Colors.green : (_isSpeaking ? Colors.blue : Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.2),
+        color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor),
+        border: Border.all(color: color, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
         children: [
-          Icon(statusIcon, color: statusColor, size: 16),
-          const SizedBox(width: 6),
           Text(
-            statusText,
+            label,
             style: TextStyle(
-              color: statusColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPerformanceMonitor() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final performanceSummary = PerformanceMonitorService.instance.getPerformanceSummary();
-        
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.speed,
-                    color: Colors.white.withOpacity(0.8),
-                    size: 16,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Performance Monitor',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Memory',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 10,
-                        ),
-                      ),
-                      Text(
-                        '${performanceSummary.averageMemoryMB.toStringAsFixed(1)} MB',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'CPU',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 10,
-                        ),
-                      ),
-                      Text(
-                        '${performanceSummary.averageCpuPercent.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Snapshots',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 10,
-                        ),
-                      ),
-                      Text(
-                        '${performanceSummary.snapshotCount}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-   Widget _buildCharacterArea() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Character display with scale animation
-          ScaleTransition(
-            scale: _scaleAnimation,
-            child: _buildCharacterDisplay(),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Character state indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: PediatricTheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: PediatricTheme.primary.withOpacity(0.3),
-              ),
-            ),
-            child: Consumer(
-              builder: (context, ref, child) {
-                final characterState = ref.watch(characterStateProvider);
-                return Text(
-                  'State: ${characterState.currentState.toUpperCase()}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: PediatricTheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build character display - shows actual 3D mouse model when available
-  Widget _buildCharacterDisplay() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final animationManager = ref.watch(riveAnimationManagerProvider);
-        
-        // Always show 3D model since we have GLTF files - bypass Rive manager check
-        return Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxHeight: 400), // Increased from 200 for full-screen experience
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.withOpacity(0.3)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Full-screen 3D Mouse Model Viewer using Mouse3D widget
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.blue, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Mouse3D(
-                      onReady: (controller) {
-                        _characterAnimator = CharacterAnimator(controller);
-                        _logger.i('🎭 3D Character Animator ready');
-                        _driveAnimation(); // Drive initial animation
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Character Status and Controls
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Character State Indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[100],
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.blue),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.person,
-                          color: Colors.blue[700],
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'State: ${ref.watch(characterStateProvider).currentState.toUpperCase()}',
-                          style: TextStyle(
-                            color: Colors.blue[700],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Talking Control Button
-                  GestureDetector(
-                    onTap: () => _toggleTalking(),
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: _isTalking ? Colors.red : Colors.green,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isTalking ? Colors.red : Colors.green).withOpacity(0.4),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        _isTalking ? Icons.stop : Icons.play_arrow,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                  
-                  // Animation Status
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green[100],
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.animation,
-                          color: Colors.green[700],
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '3D Active',
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Character Info
-              Text(
-                '3D Mouse Character',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              const SizedBox(height: 4),
-              
-              Text(
-                'Interactive 3D Model with Real Animations',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRiveCharacter() {
-    final characterState = ref.read(characterStateProvider);
-    final artboard = characterState.riveArtboard;
-
-    if (artboard == null) {
-      // Show placeholder character when no Rive artboard is available
-      return _buildPlaceholderCharacter();
-    }
-
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Rive(
-          artboard: artboard,
-          fit: BoxFit.contain,
-          useArtboardSize: true,
-        ),
-      ),
-    );
-  }
-
-  /// Build placeholder character when no Rive animations are available
-  Widget _buildPlaceholderCharacter() {
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        color: PediatricTheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(
-          color: PediatricTheme.primary,
-          width: 3,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.medical_services,
-            size: 80,
-            color: PediatricTheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Dr. Healthie',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: PediatricTheme.primary,
+              color: color,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
           Text(
-            'Character Ready',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: PediatricTheme.primary.withOpacity(0.7),
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingCharacter() {
-    return Container(
-      color: PediatricTheme.surface,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(PediatricTheme.primary),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading Character...',
-            style: PediatricTheme.textTheme.bodyLarge?.copyWith(
-              color: PediatricTheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildControlPanel() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Character state controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStateButton('idle', 'Idle', Icons.person),
-              _buildStateButton('listening', 'Listen', Icons.hearing),
-              _buildStateButton('speaking', 'Speak', Icons.record_voice_over),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStateButton('thinking', 'Think', Icons.psychology),
-              _buildStateButton('concerned', 'Concerned', Icons.sentiment_dissatisfied),
-              _buildStateButton('happy', 'Happy', Icons.sentiment_satisfied),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Performance monitoring controls (development only)
-          if (kDebugMode) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildPerformanceButton(),
-                _buildClearPerformanceButton(),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-          
-          // Main action button
-          SizedBox(
-            width: double.infinity,
-            child: GFButton(
-              onPressed: _isInitialized ? _startConversation : null,
-              text: 'Start Conversation',
-              icon: Icon(
-                _isInitialized ? Icons.chat : Icons.hourglass_empty,
-                color: Colors.white,
-              ),
-              size: GFSize.LARGE,
-              color: PediatricTheme.primary,
-              shape: GFButtonShape.pills,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStateButton(String state, String label, IconData icon) {
-    final characterState = ref.read(characterStateProvider);
-    final isActive = characterState.currentState == state;
-    
-    return GFButton(
-      onPressed: _isInitialized
-          ? () async {
-              try {
-                final characterStateNotifier = ref.read(characterStateProvider.notifier);
-                await characterStateNotifier.changeState(state);
-              } catch (e) {
-                _showErrorSnackBar('Failed to change state: $e');
-              }
-            }
-          : null,
-      text: label,
-      icon: Icon(icon, size: 16),
-      size: GFSize.SMALL,
-      color: isActive ? PediatricTheme.primary : PediatricTheme.surface,
-      textColor: isActive ? Colors.white : PediatricTheme.onSurface,
-      shape: GFButtonShape.pills,
-    );
-  }
-
-  Widget _buildPerformanceButton() {
-    return GFButton(
-      onPressed: () {
-        PerformanceMonitorService.instance.startMonitoring(interval: const Duration(seconds: 10));
-        _showSnackBar('Performance monitoring started (interval: 10s)');
-      },
-      text: 'Start Perf',
-      icon: Icon(Icons.speed, color: Colors.white),
-      size: GFSize.SMALL,
-      color: Colors.green,
-      shape: GFButtonShape.pills,
-    );
-  }
-
-  Widget _buildClearPerformanceButton() {
-    return GFButton(
-      onPressed: () {
-        PerformanceMonitorService.instance.clearData();
-        _showSnackBar('Performance data cleared');
-      },
-      text: 'Clear Perf',
-      icon: Icon(Icons.clear_all, color: Colors.white),
-      size: GFSize.SMALL,
-      color: Colors.red,
-      shape: GFButtonShape.pills,
-    );
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.blue,
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   Widget _buildConversationArea() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final characterState = ref.watch(characterStateProvider);
-        
-        return Container(
-          height: 200,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: PediatricTheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      height: 150,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: PediatricTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Conversation Header
+          Row(
             children: [
+              Icon(Icons.chat_bubble, color: PediatricTheme.primary, size: 20),
+              const SizedBox(width: 8),
               Text(
                 'Conversation',
-                style: PediatricTheme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              // Current message
-              if (characterState.currentMessage.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: PediatricTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: PediatricTheme.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    characterState.currentMessage,
-                    style: PediatricTheme.textTheme.bodyMedium,
-                  ),
-                ),
-              
-              const SizedBox(height: 12),
-              
-              // Conversation history
-              Expanded(
-                child: ListView.builder(
-                  itemCount: characterState.conversationHistory.length,
-                  itemBuilder: (context, index) {
-                    final message = characterState.conversationHistory[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        message,
-                        style: PediatricTheme.textTheme.bodySmall,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  },
+                style: TextStyle(
+                  color: PediatricTheme.primary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          // Conversation Content
+          Expanded(
+            child: _isProcessing
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text('Processing...', style: TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                  )
+                : _recognizedText.isNotEmpty
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'You said:',
+                            style: TextStyle(
+                              color: PediatricTheme.onSurface,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _recognizedText,
+                            style: TextStyle(
+                              color: PediatricTheme.onSurface,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (_aiResponse.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Response:',
+                              style: TextStyle(
+                                color: PediatricTheme.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _aiResponse,
+                              style: TextStyle(
+                                color: PediatricTheme.onSurface,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ],
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.mic_none, color: Colors.grey[400], size: 32),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap "Start Conversation" to begin',
+                              style: TextStyle(
+                                color: PediatricTheme.primary,
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+          ),
+        ],
+      ),
     );
-  }
-
-  @override
-  void dispose() {
-    // Stop performance monitoring
-    if (kDebugMode) {
-      PerformanceMonitorService.instance.stopMonitoring();
-    }
-    
-    // Stop all animations before disposing to prevent memory leaks
-    _fadeController.stop();
-    _scaleController.stop();
-    
-    // Dispose animation controllers
-    _fadeController.dispose();
-    _scaleController.dispose();
-    
-    // Dispose Rive controllers
-    _riveController?.dispose();
-    _stateMachineController?.dispose();
-    
-    // Dispose character animator
-    _characterAnimator?.dispose();
-    
-    // Clear references to prevent memory leaks
-    _characterAnimator = null;
-    _riveController = null;
-    _stateMachineController = null;
-    
-    super.dispose();
   }
 }
