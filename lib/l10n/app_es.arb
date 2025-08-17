@@ -1,0 +1,56 @@
+{
+  "@@locale": "es",
+  "appTitle": "BeforeDoctor",
+  "appSubtitle": "Aplicación de Salud por Voz",
+  
+  "micButtonListening": "Escuchando. Mantén presionado para parar.",
+  "micButtonReady": "Toca para hablar",
+  "micButtonAccessibility": "Botón del micrófono para entrada de voz",
+  
+  "statusReady": "Listo",
+  "statusListening": "Escuchando",
+  "statusProcessing": "Procesando",
+  "statusSpeaking": "Hablando",
+  "statusComplete": "Completado",
+  "statusConcerned": "Preocupado",
+  
+  "characterState": "Personaje",
+  "languageLabel": "Idioma",
+  "statusLabel": "Estado",
+  
+  "conversationHeader": "Conversación",
+  "conversationStart": "Toca \"Iniciar Conversación\" para comenzar",
+  "conversationYouSaid": "Dijiste:",
+  "conversationResponse": "Respuesta:",
+  "conversationProcessing": "Procesando...",
+  
+  "errorLoadingModel": "Error al Cargar Modelo 3D",
+  "loading3DCharacter": "Cargando Personaje 3D...",
+  "selectedCharacter": "Seleccionado: {character}",
+  "@selectedCharacter": {
+    "description": "Muestra qué personaje 3D está seleccionado",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "startConversation": "Iniciar Conversación",
+  "stopListening": "Dejar de Escuchar",
+  
+  "audienceKid": "Modo Niño",
+  "audienceParent": "Modo Padre",
+  
+  "pageChat": "Chat",
+  "pageInsights": "Información",
+  "pageLog": "Registro",
+  "pageSettings": "Configuración",
+  
+  "readyState": "Listo",
+  "listeningState": "Escuchando",
+  "processingState": "Procesando",
+  "completeState": "Completado",
+  "concernedState": "Preocupado"
+}

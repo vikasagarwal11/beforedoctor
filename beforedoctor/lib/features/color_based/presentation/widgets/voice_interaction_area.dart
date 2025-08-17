@@ -75,7 +75,12 @@ class _VoiceInteractionAreaState extends State<VoiceInteractionArea>
                    widget.currentStatus != AppStatus.speaking,
         ),
         
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
+        
+        // Real-time status indicator
+        _buildStatusIndicator(),
+        
+        const SizedBox(height: 20),
         
         // Rotating prompts
         _buildRotatingPrompts(),
@@ -93,28 +98,11 @@ class _VoiceInteractionAreaState extends State<VoiceInteractionArea>
       child: AnimatedBuilder(
         animation: _textPulseController,
         builder: (context, child) {
-          final l10n = AppLocalizations.of(context);
-          if (l10n == null) return const SizedBox.shrink();
-          
-          final prompts = widget.audience == Audience.child 
-            ? [
-                l10n.prompt_1_child,
-                l10n.prompt_2_child,
-                l10n.prompt_3_child,
-                l10n.prompt_4_child,
-                l10n.prompt_5_child,
-              ]
-            : [
-                l10n.prompt_1_parent,
-                l10n.prompt_2_parent,
-                l10n.prompt_3_parent,
-                l10n.prompt_4_parent,
-              ];
-          
-          final currentPrompt = prompts[(_textPulseController.value * prompts.length).floor() % prompts.length];
+          // Get dynamic content based on current status
+          final dynamicContent = _getDynamicContent();
           
           return Text(
-            currentPrompt,
+            dynamicContent,
             style: TextStyle(
               fontSize: 18,
               color: ClinicColors.white.withOpacity(0.9),
@@ -123,6 +111,101 @@ class _VoiceInteractionAreaState extends State<VoiceInteractionArea>
             textAlign: TextAlign.center,
           );
         },
+      ),
+    );
+  }
+  
+  /// Get dynamic content based on current AI status
+  String _getDynamicContent() {
+    switch (widget.currentStatus) {
+      case AppStatus.ready:
+        return widget.audience == Audience.child 
+          ? "Tap the mic and tell me what's wrong!"
+          : "Tap the mic to describe your child's symptoms";
+          
+      case AppStatus.listening:
+        return widget.audience == Audience.child 
+          ? "I'm listening... tell me more!"
+          : "Listening... please describe the symptoms";
+          
+      case AppStatus.processing:
+        return widget.audience == Audience.child 
+          ? "Thinking... let me figure this out!"
+          : "Processing... analyzing the symptoms";
+          
+      case AppStatus.speaking:
+        return widget.audience == Audience.child 
+          ? "Let me tell you what I found!"
+          : "Providing medical assessment...";
+          
+      case AppStatus.complete:
+        return widget.audience == Audience.child 
+          ? "All done! How are you feeling now?"
+          : "Assessment complete. Any other concerns?";
+          
+      case AppStatus.concerned:
+        return widget.audience == Audience.child 
+          ? "I'm concerned. Let's get help!"
+          : "⚠️ Medical attention may be needed";
+          
+      default:
+        return widget.audience == Audience.child 
+          ? "Hello! How can I help you today?"
+          : "Ready to assist with your child's health";
+    }
+  }
+
+  Widget _buildStatusIndicator() {
+    String statusText;
+    Color statusColor;
+    
+    switch (widget.currentStatus) {
+      case AppStatus.ready:
+        statusText = "Ready to help!";
+        statusColor = ClinicColors.mint;
+        break;
+      case AppStatus.listening:
+        statusText = "🎧 Listening...";
+        statusColor = ClinicColors.sea;
+        break;
+      case AppStatus.processing:
+        statusText = "🧠 Thinking...";
+        statusColor = ClinicColors.amber;
+        break;
+      case AppStatus.speaking:
+        statusText = "🗣️ Speaking...";
+        statusColor = ClinicColors.speak;
+        break;
+      case AppStatus.complete:
+        statusText = "✅ Done!";
+        statusColor = ClinicColors.mint;
+        break;
+      case AppStatus.concerned:
+        statusText = "⚠️ Concern detected!";
+        statusColor = ClinicColors.coral;
+        break;
+      default:
+        statusText = "Ready";
+        statusColor = ClinicColors.white;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: statusColor.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        statusText,
+        style: TextStyle(
+          color: statusColor,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

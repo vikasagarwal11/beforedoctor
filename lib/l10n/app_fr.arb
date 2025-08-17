@@ -1,0 +1,56 @@
+{
+  "@@locale": "fr",
+  "appTitle": "AvantLeMédecin",
+  "appSubtitle": "Application de Santé Pilotée par la Voix",
+  
+  "micButtonListening": "Écoute. Appuyez longuement pour arrêter.",
+  "micButtonReady": "Appuyez pour parler",
+  "micButtonAccessibility": "Bouton du microphone pour saisie vocale",
+  
+  "statusReady": "Prêt",
+  "statusListening": "Écoute",
+  "statusProcessing": "Traitement",
+  "statusSpeaking": "Parle",
+  "statusComplete": "Terminé",
+  "statusConcerned": "Inquiet",
+  
+  "characterState": "Personnage",
+  "languageLabel": "Langue",
+  "statusLabel": "État",
+  
+  "conversationHeader": "Conversation",
+  "conversationStart": "Appuyez sur \"Commencer la Conversation\" pour commencer",
+  "conversationYouSaid": "Vous avez dit :",
+  "conversationResponse": "Réponse :",
+  "conversationProcessing": "Traitement...",
+  
+  "errorLoadingModel": "Erreur de Chargement du Modèle 3D",
+  "loading3DCharacter": "Chargement du Personnage 3D...",
+  "selectedCharacter": "Sélectionné : {character}",
+  "@selectedCharacter": {
+    "description": "Affiche quel personnage 3D est sélectionné",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "startConversation": "Commencer la Conversation",
+  "stopListening": "Arrêter d'Écouter",
+  
+  "audienceKid": "Mode Enfant",
+  "audienceParent": "Mode Parent",
+  
+  "pageChat": "Chat",
+  "pageInsights": "Aperçus",
+  "pageLog": "Journal",
+  "pageSettings": "Paramètres",
+  
+  "readyState": "Prêt",
+  "listeningState": "Écoute",
+  "processingState": "Traitement",
+  "completeState": "Terminé",
+  "concernedState": "Inquiet"
+}

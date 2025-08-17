@@ -1,0 +1,56 @@
+{
+  "@@locale": "hi",
+  "appTitle": "डॉक्टर से पहले",
+  "appSubtitle": "आवाज से चलने वाला स्वास्थ्य ऐप",
+  
+  "micButtonListening": "सुन रहा है। रोकने के लिए लंबे समय तक दबाएं।",
+  "micButtonReady": "बात करने के लिए टैप करें",
+  "micButtonAccessibility": "आवाज इनपुट के लिए माइक्रोफोन बटन",
+  
+  "statusReady": "तैयार",
+  "statusListening": "सुन रहा है",
+  "statusProcessing": "प्रोसेसिंग",
+  "statusSpeaking": "बोल रहा है",
+  "statusComplete": "पूरा",
+  "statusConcerned": "चिंतित",
+  
+  "characterState": "पात्र",
+  "languageLabel": "भाषा",
+  "statusLabel": "स्थिति",
+  
+  "conversationHeader": "बातचीत",
+  "conversationStart": "शुरू करने के लिए \"बातचीत शुरू करें\" पर टैप करें",
+  "conversationYouSaid": "आपने कहा:",
+  "conversationResponse": "जवाब:",
+  "conversationProcessing": "प्रोसेसिंग...",
+  
+  "errorLoadingModel": "3D मॉडल लोड करने में त्रुटि",
+  "loading3DCharacter": "3D पात्र लोड हो रहा है...",
+  "selectedCharacter": "चयनित: {character}",
+  "@selectedCharacter": {
+    "description": "दिखाता है कि कौन सा 3D पात्र चयनित है",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "startConversation": "बातचीत शुरू करें",
+  "stopListening": "सुनना बंद करें",
+  
+  "audienceKid": "बच्चा मोड",
+  "audienceParent": "माता-पिता मोड",
+  
+  "pageChat": "चैट",
+  "pageInsights": "अंतर्दृष्टि",
+  "pageLog": "लॉग",
+  "pageSettings": "सेटिंग्स",
+  
+  "readyState": "तैयार",
+  "listeningState": "सुन रहा है",
+  "processingState": "प्रोसेसिंग",
+  "completeState": "पूरा",
+  "concernedState": "चिंतित"
+}

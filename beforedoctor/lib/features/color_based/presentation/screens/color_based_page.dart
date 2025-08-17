@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../core/services/voice_service.dart';
-import '../../../../core/services/nlu_service.dart';
-import '../../../../core/services/tts_service.dart';
-import '../../../../core/services/mock_voice_service.dart';
-import '../../../../core/services/mock_nlu_service.dart';
-import '../../../../core/services/mock_tts_service.dart';
+import '../../../../core/services/voice_input_service.dart';
+import '../../../../core/services/symptom_extraction_service.dart';
+import '../../../../core/services/ai_response_orchestrator.dart';
+import '../../../../core/services/ai_prompt_service.dart';
+import '../../../../core/services/treatment_recommendation_service.dart';
+import '../../../../core/services/cdc_risk_assessment_service.dart';
+import '../../../../core/services/multi_symptom_analyzer.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/models/app_models.dart';
 import '../../domain/models/conversation_message.dart';
 import '../widgets/particle_background.dart';
@@ -42,13 +44,19 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
   Audience _audience = Audience.child; // Default to kid-friendly language
   
   // ML/AI Services
-  late VoiceService _voiceService;
-  late NLUService _nluService;
-  late TTSService _ttsService;
+  late VoiceInputService _voiceService;
+  late SymptomExtractionService _symptomExtractionService;
+  late AIResponseOrchestrator _aiResponseOrchestrator;
+  late AIPromptService _aiPromptService;
+  late TreatmentRecommendationService _treatmentRecommendationService;
+  late CDCRiskAssessmentService _cdcRiskAssessmentService;
+  late MultiSymptomAnalyzer _multiSymptomAnalyzer;
+  late LoggingService _loggingService;
   
   // Conversation state
   String _lastTranscription = '';
   String _lastResponse = '';
+  List<ConversationMessage> _conversationMessages = [];
   
   // Page controller for TikTok-style navigation
   late PageController _pageController;
@@ -58,68 +66,89 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
     super.initState();
     _pageController = PageController(initialPage: _currentPageIndex);
     
-    // Initialize ML/AI services (using mocks for now)
+    // Initialize ML/AI services (using real services now)
     _initializeServices();
+    
+    // Add initial welcome message
+    _addMessage("Hello! I'm Dr. Healthie. How can I help you today?", false);
   }
   
-  void _initializeServices() {
-    _voiceService = MockVoiceService();
-    _nluService = MockNLUService();
-    _ttsService = MockTTSService();
-    
-    // Set up voice recognition streams
-    _setupVoiceStreams();
-    
-    // Set up TTS event streams
-    _setupTTSStreams();
+  /// Add a new message to the conversation
+  void _addMessage(String text, bool isUser) {
+    setState(() {
+      _conversationMessages.add(ConversationMessage(
+        text: text,
+        isUser: isUser,
+        timestamp: DateTime.now(),
+      ));
+    });
+  }
+  
+  void _initializeServices() async {
+    try {
+      // Initialize real AI/ML services
+      _voiceService = VoiceInputService.instance;
+      _symptomExtractionService = SymptomExtractionService();
+      _aiResponseOrchestrator = AIResponseOrchestrator();
+      _aiPromptService = AIPromptService();
+      _treatmentRecommendationService = TreatmentRecommendationService();
+      _cdcRiskAssessmentService = CDCRiskAssessmentService();
+      _multiSymptomAnalyzer = MultiSymptomAnalyzer();
+      _loggingService = LoggingService();
+      
+      // Initialize services that need async setup
+      await _aiPromptService.loadTemplates();
+      await _voiceService.initialize();
+      
+      // Set up voice recognition streams
+      _setupVoiceStreams();
+      
+      print('✅ All AI/ML services initialized successfully');
+    } catch (e) {
+      print('❌ Error initializing services: $e');
+      // Fallback to basic functionality
+    }
   }
   
   void _setupVoiceStreams() {
     // Listen for voice recognition results
-    _voiceService.results.listen((result) {
-      if (result.isFinal) {
-        _lastTranscription = result.text;
-        _processVoiceInput(result.text);
+    _voiceService.transcriptionStream.listen((transcription) {
+      if (transcription.isNotEmpty) {
+        _lastTranscription = transcription;
+        _processVoiceInput(transcription);
       }
     });
     
-    // Listen for VAD silence (user stopped speaking)
-    _voiceService.vadSilence.listen((isSilent) {
-      if (isSilent && _currentStatus == AppStatus.listening) {
-        _onVadSilence();
+    // Listen for confidence updates
+    _voiceService.confidenceStream.listen((confidence) {
+      // Update UI with confidence level
+      print('🎯 Voice confidence: ${(confidence * 100).toStringAsFixed(1)}%');
+    });
+    
+    // Listen for listening state changes
+    _voiceService.listeningStream.listen((isListening) {
+      if (isListening) {
+        _changeStatus(AppStatus.listening);
+      } else if (_currentStatus == AppStatus.listening) {
+        _changeStatus(AppStatus.processing);
+      }
+    });
+    
+    // Listen for processing state changes
+    _voiceService.processingStream.listen((isProcessing) {
+      if (isProcessing) {
+        _changeStatus(AppStatus.processing);
       }
     });
   }
   
-  void _setupTTSStreams() {
-    // Listen for TTS events
-    _ttsService.events.listen((event) {
-      switch (event.type) {
-        case TTSEventType.started:
-          _changeStatus(AppStatus.speaking);
-          break;
-        case TTSEventType.completed:
-          _changeStatus(AppStatus.ready);
-          break;
-        case TTSEventType.error:
-          _changeStatus(AppStatus.ready);
-          break;
-        default:
-          break;
-      }
-    });
-  }
-
   @override
   void dispose() {
     _pageController.dispose();
     
     // Dispose ML/AI services
-    if (_voiceService is MockVoiceService) {
-      (_voiceService as MockVoiceService).dispose();
-    }
-    if (_ttsService is MockTTSService) {
-      (_ttsService as MockTTSService).dispose();
+    if (_voiceService is VoiceInputService) {
+      // VoiceInputService is a singleton, no need to dispose
     }
     
     super.dispose();
@@ -163,7 +192,11 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
   Future<void> _startVoiceRecognition() async {
     try {
       HapticFeedback.lightImpact();
-      await _voiceService.startListening();
+      
+      // For now, we'll use the simulateVoiceInput method since real speech recognition isn't implemented yet
+      // In the future, this will be real voice recognition
+      await _voiceService.simulateVoiceInput("I want to talk about pain in my back");
+      
       _changeStatus(AppStatus.listening);
     } catch (e) {
       print('Error starting voice recognition: $e');
@@ -175,39 +208,83 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
   Future<void> _stopVoiceRecognition() async {
     try {
       HapticFeedback.selectionClick();
-      final result = await _voiceService.stopAndTranscribe();
       _changeStatus(AppStatus.processing);
       
-      // Process the voice input
-      await _processVoiceInput(result.text);
+      // The voice service will automatically process and send results via streams
+      // No need to manually call stop here
     } catch (e) {
       print('Error stopping voice recognition: $e');
       _changeStatus(AppStatus.ready);
     }
   }
   
-  /// Process voice input through NLU
+  /// Process voice input through comprehensive AI pipeline
   Future<void> _processVoiceInput(String text) async {
     try {
       _changeStatus(AppStatus.processing);
       
-      // Process through NLU
-      final nluResult = await _nluService.processText(text);
-      _lastResponse = nluResult.response;
+      // Add user message to conversation
+      _addMessage(text, true);
       
-      // Check if medical attention is required
-      if (nluResult.requiresMedicalAttention) {
-        _changeStatus(AppStatus.concerned);
-        // Could show alert dialog here
+      // Step 1: Extract symptoms using AI (now AI-first approach)
+      final extractionResult = await _symptomExtractionService.extractSymptoms(text);
+      
+      if (extractionResult.isSuccessful) {
+        print('🎯 Extracted symptoms: ${extractionResult.symptoms}');
+        
+        // Step 2: Get comprehensive AI response using orchestrator
+        final aiResponse = await _aiResponseOrchestrator.getComprehensiveResponse(
+          symptoms: extractionResult.symptoms,
+          childContext: _getChildContext(),
+          userQuestion: text,
+        );
+        
+        // Step 3: Update conversation with AI response
+        _lastResponse = aiResponse['response'] ?? 'I understand your concern. Let me provide some guidance.';
+        _addMessage(_lastResponse, false);
+        
+        // Step 4: Check if medical attention is required
+        if (aiResponse['risk_level'] == 'high' || aiResponse['requires_medical_attention'] == true) {
+          _changeStatus(AppStatus.concerned);
+          // Could show alert dialog here
+        } else {
+          _changeStatus(AppStatus.complete);
+        }
+        
+        // Step 5: Log the interaction
+        await _loggingService.logInteraction(
+          interactionType: 'symptom_extraction',
+          symptomCategory: extractionResult.symptoms.isNotEmpty ? extractionResult.symptoms.first : 'unknown',
+          modelUsed: 'ai_orchestrator',
+          responseTime: 0, // We'll calculate this in the future
+          success: true,
+          metadata: {
+            'extracted_symptoms': extractionResult.symptoms,
+            'confidence': extractionResult.confidence,
+            'ai_response': aiResponse,
+            'child_context': _getChildContext(),
+          },
+        );
+        
+        print('✅ AI processing completed successfully');
+      } else {
+        // Fallback to basic processing
+        _lastResponse = "I heard you say: '$text'. Could you please provide more details about the symptoms?";
+        _addMessage(_lastResponse, false);
+        _changeStatus(AppStatus.complete);
       }
       
-      // Speak the response
-      _changeStatus(AppStatus.speaking);
-      await _ttsService.speak(nluResult.response);
+      // Reset to ready state after a delay
+      Future.delayed(const Duration(seconds: 3), () {
+        if (_currentStatus == AppStatus.complete || _currentStatus == AppStatus.concerned) {
+          _changeStatus(AppStatus.ready);
+        }
+      });
       
-      // Status will be set to 'ready' by TTS completion event
     } catch (e) {
       print('Error processing voice input: $e');
+      _lastResponse = "I'm having trouble processing that right now. Please try again.";
+      _addMessage(_lastResponse, false);
       _changeStatus(AppStatus.ready);
     }
   }
@@ -222,6 +299,18 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
   /// Raise concern flag (e.g., high fever detected)
   void _raiseConcern() {
     _changeStatus(AppStatus.concerned);
+  }
+
+  /// Get child context for AI processing (placeholder for now)
+  Map<String, dynamic> _getChildContext() {
+    return {
+      'child_age': 5, // Default age - will come from child profile
+      'child_gender': 'unknown',
+      'child_weight': 20.0, // kg - will come from child profile
+      'allergies': [], // Will come from child profile
+      'current_medications': [], // Will come from child profile
+      'medical_history': [], // Will come from child profile
+    };
   }
 
   @override
@@ -346,43 +435,8 @@ class _ColorBasedPageState extends ConsumerState<ColorBasedPage> {
   }
 
   Widget _buildConversationArea() {
-    // Show real conversation data if available
-    final messages = <ConversationMessage>[];
-    
-    if (_lastTranscription.isNotEmpty) {
-      messages.add(ConversationMessage(
-        text: _lastTranscription,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-    }
-    
-    if (_lastResponse.isNotEmpty) {
-      messages.add(ConversationMessage(
-        text: _lastResponse,
-        isUser: false,
-        timestamp: DateTime.now(),
-      ));
-    }
-    
-    // Add placeholder messages if no real data
-    if (messages.isEmpty) {
-      messages.addAll([
-        ConversationMessage(
-          text: "Ouch, my tummy hurts",
-          isUser: true,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
-        ),
-        ConversationMessage(
-          text: _audience == Audience.child ? "Where does it hurt?" : "Where does it hurt exactly?",
-          isUser: false,
-          timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-        ),
-      ]);
-    }
-    
     return ConversationArea(
-      messages: messages,
+      messages: _conversationMessages,
       audience: _audience,
     );
   }

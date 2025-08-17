@@ -139,15 +139,69 @@ class VoiceInputService {
     _isProcessing = true;
     _processingController.add(true);
 
-    // Detect symptoms from transcription
+    // AI-FIRST APPROACH: Send directly to AI for real-time processing
+    // No more rule-based keyword matching - let AI handle everything
+    _processWithAI(transcription);
+  }
+
+  /// Process voice input directly with AI (primary method)
+  Future<void> _processWithAI(String transcription) async {
+    try {
+      print('🧠 Processing with AI: "$transcription"');
+      
+      // Step 1: Send directly to AI for comprehensive analysis
+      final aiResult = await _enhanceSymptomExtraction(transcription, []);
+      
+      if (aiResult.isNotEmpty) {
+        print('✅ AI processing successful: $aiResult');
+        
+        // Step 2: AI has already extracted symptoms, severity, and context
+        // No need for manual keyword matching
+        final symptoms = aiResult['symptoms'] ?? [];
+        final enhancedData = aiResult['enhanced_extraction'] ?? '';
+        final apiUsed = aiResult['api_used'] ?? 'unknown';
+        
+        print('🏥 AI extracted symptoms: $symptoms');
+        print('📝 AI analysis: $enhancedData');
+        print('🔌 API used: $apiUsed');
+        
+        // Step 3: Trigger AI response generation
+        _onSymptomsDetected(aiResult, transcription);
+        
+      } else {
+        print('❌ AI processing failed, falling back to basic detection');
+        // Only fallback to rules if AI completely fails
+        _fallbackToRules(transcription);
+      }
+      
+    } catch (e) {
+      print('❌ Error in AI processing: $e');
+      _fallbackToRules(transcription);
+    } finally {
+      _isProcessing = false;
+      _processingController.add(false);
+    }
+  }
+
+  /// Fallback to rule-based detection (only if AI fails)
+  void _fallbackToRules(String transcription) {
+    print('🔄 Falling back to rule-based detection');
+    
+    // Detect symptoms from transcription using keyword matching
     final symptoms = detectSymptoms(transcription);
     
     if (symptoms.isNotEmpty) {
-      print('🏥 Detected symptoms: $symptoms');
-      // Trigger symptom processing
-      _processSymptoms(symptoms, transcription);
+      print('🏥 Rule-based symptoms detected: $symptoms');
+      // Create basic result structure
+      final fallbackResult = {
+        'symptoms': symptoms,
+        'transcription': transcription,
+        'enhanced_extraction': 'Basic rule-based detection',
+        'api_used': 'fallback_rules',
+      };
+      _onSymptomsDetected(fallbackResult, transcription);
     } else {
-      print('❓ No symptoms detected in transcription');
+      print('❓ No symptoms detected even with rules');
       _isProcessing = false;
       _processingController.add(false);
     }
@@ -169,6 +223,14 @@ class VoiceInputService {
       'headache': ['headache', 'head hurts', 'migraine', 'head pain'],
       'sore_throat': ['sore throat', 'throat hurts', 'swallowing'],
       'breathing_difficulty': ['breathing', 'wheezing', 'shortness', 'chest tight'],
+      'back_pain': ['back pain', 'back hurts', 'backache', 'back sore', 'spine', 'lower back'],
+      'general_pain': ['pain', 'hurts', 'ache', 'sore', 'hurt', 'aching', 'painful'],
+      'stomach_pain': ['stomach pain', 'belly ache', 'tummy hurts', 'abdominal pain', 'cramps'],
+      'joint_pain': ['joint pain', 'knee hurts', 'elbow pain', 'ankle pain', 'wrist pain'],
+      'muscle_pain': ['muscle pain', 'muscle ache', 'sore muscles', 'body aches'],
+      'fatigue': ['tired', 'fatigue', 'exhausted', 'weak', 'lethargic', 'no energy'],
+      'loss_of_appetite': ['no appetite', 'not hungry', 'won\'t eat', 'refusing food'],
+      'sleep_issues': ['can\'t sleep', 'insomnia', 'sleeping too much', 'restless sleep'],
     };
 
     for (final entry in symptomKeywords.entries) {
@@ -186,44 +248,29 @@ class VoiceInputService {
     return symptoms;
   }
 
-  /// Process detected symptoms
-  Future<void> _processSymptoms(List<String> symptoms, String transcription) async {
-    try {
-      // Use AI to enhance symptom extraction
-      final enhancedSymptoms = await _enhanceSymptomExtraction(transcription, symptoms);
-      
-      // Trigger callback or event for symptom processing
-      _onSymptomsDetected(enhancedSymptoms, transcription);
-      
-    } catch (e) {
-      print('❌ Error processing symptoms: $e');
-    } finally {
-      _isProcessing = false;
-      _processingController.add(false);
-    }
-  }
-
   /// Enhance symptom extraction using AI
   Future<Map<String, dynamic>> _enhanceSymptomExtraction(String transcription, List<String> symptoms) async {
     try {
-      // Try xAI Grok first, fallback to OpenAI
+      // AI-FIRST: Send raw voice input directly to AI for comprehensive analysis
+      // No pre-detected symptoms needed - let AI figure everything out
+      
       final primaryApi = _config.primaryVoiceApi;
       final fallbackApi = _config.fallbackVoiceApi;
       
       Map<String, dynamic> result = {};
       
       if (primaryApi == 'grok') {
-        result = await _callGrokAPI(transcription, symptoms);
+        result = await _callGrokAPI(transcription);
       } else if (primaryApi == 'openai') {
-        result = await _callOpenAIAPI(transcription, symptoms);
+        result = await _callOpenAIAPI(transcription);
       }
       
       // If primary fails and fallback is enabled, try fallback
       if (result.isEmpty && _config.autoFallbackEnabled) {
         if (fallbackApi == 'grok') {
-          result = await _callGrokAPI(transcription, symptoms);
+          result = await _callGrokAPI(transcription);
         } else if (fallbackApi == 'openai') {
-          result = await _callOpenAIAPI(transcription, symptoms);
+          result = await _callOpenAIAPI(transcription);
         }
       }
       
@@ -235,7 +282,7 @@ class VoiceInputService {
   }
 
   /// Call xAI Grok Voice API
-  Future<Map<String, dynamic>> _callGrokAPI(String transcription, List<String> symptoms) async {
+  Future<Map<String, dynamic>> _callGrokAPI(String transcription) async {
     try {
       //final url = Uri.parse('https://api.x.ai/v1/chat/completions');
       final url = Uri.parse(_config.xaiGrokApiEndpoint);
@@ -251,14 +298,32 @@ class VoiceInputService {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a pediatric symptom extraction assistant. Extract symptoms, severity, and additional details from the parent\'s voice input.'
+              'content': '''You are Dr. Healthie, a pediatric AI assistant. Analyze voice input and provide:
+
+1. SYMPTOM EXTRACTION: Identify all symptoms, severity, and context
+2. MEDICAL ASSESSMENT: Basic risk level and urgency
+3. FOLLOW-UP QUESTIONS: 3-5 relevant medical questions to gather more information
+4. IMMEDIATE ADVICE: What to do right now
+5. WHEN TO SEEK CARE: Clear guidance on medical attention
+
+Format your response as JSON with these fields:
+{
+  "symptoms": ["symptom1", "symptom2"],
+  "severity": "low/medium/high",
+  "risk_level": "low/medium/high",
+  "assessment": "Brief medical assessment",
+  "follow_up_questions": ["Question 1?", "Question 2?", "Question 3?"],
+  "immediate_advice": "What to do now",
+  "seek_care_when": "When to see a doctor",
+  "confidence": 0.95
+}'''
             },
             {
               'role': 'user',
-              'content': 'Extract pediatric symptoms from this voice input: "$transcription". Detected symptoms: $symptoms'
+              'content': 'Analyze this pediatric voice input: "$transcription"'
             }
           ],
-          'max_tokens': 500,
+          'max_tokens': 800,
           //'temperature': 0.3,
           'temperature': _config.xaiGrokTemperature,
         }),
@@ -268,12 +333,29 @@ class VoiceInputService {
         final data = jsonDecode(response.body);
         final content = data['choices'][0]['message']['content'];
         
-        return {
-          'symptoms': symptoms,
-          'transcription': transcription,
-          'enhanced_extraction': content,
-          'api_used': 'grok',
-        };
+        // Try to parse JSON response from AI
+        try {
+          final aiResponse = jsonDecode(content);
+          return {
+            'symptoms': aiResponse['symptoms'] ?? [],
+            'transcription': transcription,
+            'enhanced_extraction': aiResponse,
+            'api_used': 'grok',
+            'severity': aiResponse['severity'],
+            'risk_level': aiResponse['risk_level'],
+            'follow_up_questions': aiResponse['follow_up_questions'] ?? [],
+            'immediate_advice': aiResponse['immediate_advice'],
+            'seek_care_when': aiResponse['seek_care_when'],
+          };
+        } catch (parseError) {
+          // If AI didn't return JSON, treat as text
+          return {
+            'symptoms': [], // Will be extracted by fallback
+            'transcription': transcription,
+            'enhanced_extraction': content,
+            'api_used': 'grok',
+          };
+        }
       } else {
         print('❌ Grok API error: ${response.statusCode}');
         return {};
@@ -285,7 +367,7 @@ class VoiceInputService {
   }
 
   /// Call OpenAI Realtime Audio API
-  Future<Map<String, dynamic>> _callOpenAIAPI(String transcription, List<String> symptoms) async {
+  Future<Map<String, dynamic>> _callOpenAIAPI(String transcription) async {
     try {
       //final url = Uri.parse('https://api.openai.com/v1/chat/completions');
       final url = Uri.parse(_config.openaiApiEndpoint);
@@ -302,14 +384,32 @@ class VoiceInputService {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a pediatric symptom extraction assistant. Extract symptoms, severity, and additional details from the parent\'s voice input.'
+              'content': '''You are Dr. Healthie, a pediatric AI assistant. Analyze voice input and provide:
+
+1. SYMPTOM EXTRACTION: Identify all symptoms, severity, and context
+2. MEDICAL ASSESSMENT: Basic risk level and urgency
+3. FOLLOW-UP QUESTIONS: 3-5 relevant medical questions to gather more information
+4. IMMEDIATE ADVICE: What to do right now
+5. WHEN TO SEEK CARE: Clear guidance on medical attention
+
+Format your response as JSON with these fields:
+{
+  "symptoms": ["symptom1", "symptom2"],
+  "severity": "low/medium/high",
+  "risk_level": "low/medium/high",
+  "assessment": "Brief medical assessment",
+  "follow_up_questions": ["Question 1?", "Question 2?", "Question 3?"],
+  "immediate_advice": "What to do now",
+  "seek_care_when": "When to see a doctor",
+  "confidence": 0.95
+}'''
             },
             {
               'role': 'user',
-              'content': 'Extract pediatric symptoms from this voice input: "$transcription". Detected symptoms: $symptoms'
+              'content': 'Analyze this pediatric voice input: "$transcription"'
             }
           ],
-          'max_tokens': 500,
+          'max_tokens': 800,
           // 'temperature': 0.3,
           'temperature': _config.openaiTemperature,
         }),
@@ -319,12 +419,29 @@ class VoiceInputService {
         final data = jsonDecode(response.body);
         final content = data['choices'][0]['message']['content'];
         
-        return {
-          'symptoms': symptoms,
-          'transcription': transcription,
-          'enhanced_extraction': content,
-          'api_used': 'openai',
-        };
+        // Try to parse JSON response from AI
+        try {
+          final aiResponse = jsonDecode(content);
+          return {
+            'symptoms': aiResponse['symptoms'] ?? [],
+            'transcription': transcription,
+            'enhanced_extraction': aiResponse,
+            'api_used': 'openai',
+            'severity': aiResponse['severity'],
+            'risk_level': aiResponse['risk_level'],
+            'follow_up_questions': aiResponse['follow_up_questions'] ?? [],
+            'immediate_advice': aiResponse['immediate_advice'],
+            'seek_care_when': aiResponse['seek_care_when'],
+          };
+        } catch (parseError) {
+          // If AI didn't return JSON, treat as text
+          return {
+            'symptoms': [], // Will be extracted by fallback
+            'transcription': transcription,
+            'enhanced_extraction': content,
+            'api_used': 'openai',
+          };
+        }
       } else {
         print('❌ OpenAI API error: ${response.statusCode}');
         return {};
@@ -337,8 +454,20 @@ class VoiceInputService {
 
   /// Callback for when symptoms are detected
   void _onSymptomsDetected(Map<String, dynamic> symptomsData, String transcription) {
-    // This will be handled by the UI layer
-    print('🏥 Symptoms detected: $symptomsData');
+    // Enhanced callback with comprehensive AI analysis
+    print('🏥 AI Analysis Complete:');
+    print('   📝 Transcription: $transcription');
+    print('   🏥 Symptoms: ${symptomsData['symptoms']}');
+    print('   ⚠️ Severity: ${symptomsData['severity'] ?? 'unknown'}');
+    print('   🚨 Risk Level: ${symptomsData['risk_level'] ?? 'unknown'}');
+    print('   💡 Assessment: ${symptomsData['assessment'] ?? 'No assessment'}');
+    print('   ❓ Follow-up Questions: ${symptomsData['follow_up_questions'] ?? []}');
+    print('   🚑 Immediate Advice: ${symptomsData['immediate_advice'] ?? 'No advice'}');
+    print('   🏥 Seek Care When: ${symptomsData['seek_care_when'] ?? 'No guidance'}');
+    print('   🔌 API Used: ${symptomsData['api_used'] ?? 'unknown'}');
+    
+    // This will be handled by the UI layer for conversation updates
+    print('🏥 Comprehensive AI analysis ready for UI processing');
   }
 
   /// Get available languages for speech recognition (placeholder)

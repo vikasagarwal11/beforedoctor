@@ -1,0 +1,56 @@
+{
+  "@@locale": "zh",
+  "appTitle": "看医生前",
+  "appSubtitle": "语音驱动健康应用",
+  
+  "micButtonListening": "正在听。长按停止。",
+  "micButtonReady": "点击说话",
+  "micButtonAccessibility": "语音输入麦克风按钮",
+  
+  "statusReady": "就绪",
+  "statusListening": "正在听",
+  "statusProcessing": "处理中",
+  "statusSpeaking": "说话中",
+  "statusComplete": "完成",
+  "statusConcerned": "担心",
+  
+  "characterState": "角色",
+  "languageLabel": "语言",
+  "statusLabel": "状态",
+  
+  "conversationHeader": "对话",
+  "conversationStart": "点击\"开始对话\"开始",
+  "conversationYouSaid": "你说：",
+  "conversationResponse": "回复：",
+  "conversationProcessing": "处理中...",
+  
+  "errorLoadingModel": "加载3D模型错误",
+  "loading3DCharacter": "加载3D角色中...",
+  "selectedCharacter": "已选择：{character}",
+  "@selectedCharacter": {
+    "description": "显示选择的3D角色",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "startConversation": "开始对话",
+  "stopListening": "停止听",
+  
+  "audienceKid": "儿童模式",
+  "audienceParent": "家长模式",
+  
+  "pageChat": "聊天",
+  "pageInsights": "洞察",
+  "pageLog": "记录",
+  "pageSettings": "设置",
+  
+  "readyState": "就绪",
+  "listeningState": "正在听",
+  "processingState": "处理中",
+  "completeState": "完成",
+  "concernedState": "担心"
+}

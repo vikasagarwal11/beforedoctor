@@ -1,0 +1,56 @@
+{
+  "@@locale": "en",
+  "appTitle": "BeforeDoctor",
+  "appSubtitle": "Voice-Driven Health App",
+  
+  "micButtonListening": "Listening. Long press to stop.",
+  "micButtonReady": "Tap to talk",
+  "micButtonAccessibility": "Microphone button for voice input",
+  
+  "statusReady": "Ready",
+  "statusListening": "Listening",
+  "statusProcessing": "Processing",
+  "statusSpeaking": "Speaking",
+  "statusComplete": "Complete",
+  "statusConcerned": "Concerned",
+  
+  "characterState": "Character",
+  "languageLabel": "Language",
+  "statusLabel": "Status",
+  
+  "conversationHeader": "Conversation",
+  "conversationStart": "Tap \"Start Conversation\" to begin",
+  "conversationYouSaid": "You said:",
+  "conversationResponse": "Response:",
+  "conversationProcessing": "Processing...",
+  
+  "errorLoadingModel": "Error Loading 3D Model",
+  "loading3DCharacter": "Loading 3D Character...",
+  "selectedCharacter": "Selected: {character}",
+  "@selectedCharacter": {
+    "description": "Shows which 3D character is selected",
+    "placeholders": {
+      "character": {
+        "type": "String",
+        "example": "jaguar"
+      }
+    }
+  },
+  
+  "startConversation": "Start Conversation",
+  "stopListening": "Stop Listening",
+  
+  "audienceKid": "Kid Mode",
+  "audienceParent": "Parent Mode",
+  
+  "pageChat": "Chat",
+  "pageInsights": "Insights", 
+  "pageLog": "Log",
+  "pageSettings": "Settings",
+  
+  "readyState": "Ready",
+  "listeningState": "Listening",
+  "processingState": "Processing",
+  "completeState": "Complete",
+  "concernedState": "Concerned"
+}

@@ -48,11 +48,12 @@ dependencies:
   firebase_auth: ^5.7.0
 
   # Voice & AI
-  google_ml_kit: ^0.18.1
+  google_ml_kit: ^0.20.0 # changed from 0.16.3 to 0.20.0
   dart_openai: ^5.1.0
   flutter_tts: ^3.8.5
-  just_audio: ^0.9.46
-  audio_session: ^0.1.25
+  just_audio: ^0.9.36
+  audio_session: ^0.1.18
+  speech_to_text: ^7.3.0 # Added for real-time speech recognition changed from 6.6.0 to 7.3.0
 
   # Utilities
   logger: ^2.0.2+1
@@ -63,6 +64,7 @@ dependencies:
   qr_flutter: ^4.1.0
   flutter_dotenv: ^5.1.0  # Added back for environment config
   path: ^1.9.0  # Added back for file handling
+  connectivity_plus: ^6.0.5 # Added for network connectivity monitoring
   
   # Localization
   flutter_localizations:
